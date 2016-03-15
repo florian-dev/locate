@@ -8,8 +8,8 @@ TODO :
 	using filters before find (ex: file-size-threshold)
 	more...
 
-------------------------------------------------------------
-
+###### locate.py -h :
+```
 usage: locate.py [-h] [-u] [-l <log_file>] [-n] [-q]
                  {find,updatedb,duplicates} ...
 
@@ -30,9 +30,10 @@ optional arguments:
                         present.
   -n, --no-stdout
   -q, --quiet
+```
 
---------------------------- find ---------------------------
-
+###### locate.py find -h :
+```
 usage: locate.py find [-h] [-i] pattern
 
 positional arguments:
@@ -41,18 +42,20 @@ positional arguments:
 optional arguments:
   -h, --help         show this help message and exit
   -i, --ignore-case
+```
 
-------------------------- updatedb -------------------------
-
+###### locate.py updatedb -h :
+```
 usage: locate.py updatedb [-h] [-r]
 
 optional arguments:
   -h, --help            show this help message and exit
   -r, --repport-total-size
                         print sum of all files size in database
+```
 
------------------------- duplicates ------------------------
-
+###### locate.py duplicates -h :
+```
 usage: locate.py duplicates [-h] [-t [<file_size>]] [-d] [-m [<count>]]
                             [-v [<count>]] [-f]
 
@@ -75,6 +78,5 @@ optional arguments:
   -f, --filter-01       filter 1 : ignore results with more than three files
                         and whose all filenames are same except for digits
                         characters (0-9)
+```
 
-						
-						
