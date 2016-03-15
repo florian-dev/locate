@@ -2,11 +2,11 @@
 Locate files using a simple managed database. Can find a file name pattern and seek for duplicates files.
 
 TODO :
-	add --db-filepath option
-	add --exclude-drives option to updatedb action
-	code refactoring
-	using filters before find (ex: file-size-threshold)
-	more...
+- [ ] add --db-filepath option
+- [ ] add --exclude-drives option to updatedb action
+- [ ] code refactoring
+- [ ] using filters before find (ex: file-size-threshold)
+- [ ] more...
 
 ###### locate.py -h :
 ```
