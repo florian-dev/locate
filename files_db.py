@@ -33,21 +33,26 @@ class FilesDb:
 		except:
 			return False
 		
-	def clear(self): # clear db
-		self._init_db()
+	def clear(self, drive=None): # clear db
+		if drive in self._db: del self._db[drive]
+		else: self._init_db()
 		
 	def drives(self): # -> [ drive, ... ]
 		#return [drive for drive, files in self._db]
 		return sorted(self._db.iterkeys())
 				
-	def files(self): # -> [ ( root, file, size ), ... ]
-		for drive in self.drives():
-			for file in self._db[drive]:
+	def files(self, drive=None): # -> [ ( root, file, size ), ... ]
+		drives = self.drives()
+		if drive != None:
+			if drive in drives: drives = [drive]
+			else: drives = []
+		for d in drives:
+			for file in self._db[d]:
 				yield file
 				
-	def size(self):
+	def size(self, drive=None):
 		s = 0
-		for root, file, size in self.files():
+		for root, file, size in self.files(drive):
 			s += size
 		return s
 				
