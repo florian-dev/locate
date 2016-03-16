@@ -1,9 +1,12 @@
 # locate
 Locate files using a simple managed database. Can find a file name pattern and seek for duplicates files.
 
+Written for Windows. On Linux updatedb and locate commands do the job (except for duplicates seek), and I don't know MacOs.
+
 TODO :
 - [x] add --db-filepath option
 - [x] add --exclude-drives option to updatedb action
+- [ ] add --drives option to restrict actions to these drives
 - [ ] code refactoring
 - [ ] using filters before find (ex: file-size-threshold)
 - [ ] more...
