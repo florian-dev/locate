@@ -1,25 +1,13 @@
 # -*- coding: utf8 -*-
-import os, sys, pickle, codecs
-from os.path import join, abspath, dirname
-from time import time
-import tee
-import files_db
-import argparse
 
-def _hr_size(size): # -> human readable file size (ex: '698.43 MB')
-	if size < 900:
-		if size > 1: plural = 's'
-		else: plural = ''
-		return '{} byte{}'.format(size, plural)
-	f = 1024.
-	s = size / f
-	mults = [ 'k', 'M', 'G', 'T' ]
-	i = 0
-	while i < 3 and s > 900:
-		s /= f
-		i += 1
-	return '{:.2f} {}B'.format(s, mults[i])
-		
+import sys, codecs
+from os.path import join
+from time import time
+import argparse
+import tee, files_db, args_types
+from common import *
+from duplicates import duplicates
+
 def _loaddb(db, verbose=False):
 	if verbose:
 		print 'loading database ...',
@@ -76,7 +64,7 @@ def _updatedb(db, args):
 			c += 1
 			s += size
 			if time() - t > 2:
-				print u' {:<12} {}'.format(_hr_size(s), root)
+				print u' {:<12} {}'.format(hr_size(s), root)
 				t = time()
 	else:
 		if args.drives is None: c = db.update()
@@ -99,11 +87,11 @@ def _repport(db):
 			ts += s
 			fc = db.len(drive)
 			tfc += fc
-			print values_str.format(drive, _hr_size(s), fc)
+			print values_str.format(drive, hr_size(s), fc)
 			dc += 1
 		if dc > 1:
 			print separa_str
-			print values_str.format('All {}'.format(dc), _hr_size(ts), tfc)
+			print values_str.format('All {}'.format(dc), hr_size(ts), tfc)
 	else: print 'database is empty.'
 
 def updatedb(db, args):
@@ -118,219 +106,15 @@ def find(db, args):
 	matches.sort()
 	for root, file, size in matches:
 		if args.drives and root[0].upper() not in args.drives: continue
-		print join(root, file), '(', _hr_size(size), ')'
+		print join(root, file), '(', hr_size(size), ')'
 		
-def _files_gen(db, drives):
-	if drives is None:
-		for file in db.files():
-			yield file
-	else:
-		for drive in drives:
-			for file in db.files(drive):
-				yield file
-
-def duplicates(db, args):
-	verbose = args.quiet < 2
-	all_files = sorted(_files_gen(db, args.drives), key=lambda item: item[1])
-	c_all = len(all_files)
-		
-	seuil = args.file_size_threshold
-	files_by_name = []
-	while all_files:
-		root, file, size = all_files.pop()
-		if seuil and size < seuil: continue
-		if files_by_name and file.lower() == files_by_name[-1][0].lower():
-			files_by_name[-1][1].append((root, size))
-		else:
-			files_by_name.append(( file, [ (root, size) ] ))
-
-	if verbose and seuil: print 'Files smaller than', _hr_size(seuil), 'are ignored.'
-	if verbose: print 'Count of filenames :', len(files_by_name)
-
-	doublons = []
-	while files_by_name:
-		file, r_s = files_by_name.pop()
-		if len(r_s) > 1:
-			r_s.sort(key=lambda item: item[0], reverse=True)
-			roots, sizes = [], []
-			while r_s:
-				root, size = r_s.pop()
-				roots.append(root)
-				sizes.append(size)
-			doublons.append((file, roots, sizes))
-
-	if not doublons:
-		if verbose: print 'Aucun doublon trouve.'
-	else:
-		doublons.sort(key=lambda item:item[1])
-		if verbose: print 'Noms de fichiers non uniques :', len(doublons)
-
-		doublons_par_reps = []
-		while doublons:
-			file, roots, sizes = doublons.pop()
-			if doublons_par_reps and roots == doublons_par_reps[-1][0]:
-				doublons_par_reps[-1][1].append(file)
-			else:
-				doublons_par_reps.append(( roots, [ file ] ))
-		if verbose: print u'Tuples de répertoires contenant des fichiers de même nom :', len(doublons_par_reps)
-		
-		seuil = args.min_file_count
-		if seuil > 1:
-			doublons_par_reps2 = []
-			while doublons_par_reps:
-				doublon = doublons_par_reps.pop()
-				if len(doublon[1]) >= seuil:
-					doublons_par_reps2.append(doublon)
-			doublons_par_reps = doublons_par_reps2
-			if verbose: print u'Tuples de répertoires contenant plus de', seuil, u'fichiers de même nom :', len(doublons_par_reps)
-			
-		# filtre 1 : enlève les résultats contenant plus de trois fichiers et dont les noms de fichiers (tous)
-		#            sont identiques à l'exception des éventuels caractères numériques (0-9)
-		if args.filter_01:
-			def grey_digits(string):
-				grey_str = string
-				for digit in '0123456789':
-					if digit in grey_str:
-						grey_str = grey_str.replace(digit, '*')
-				return grey_str
-			if verbose: print 'Application du filtre 1 ...',
-			doublons_par_reps2 = []
-			while doublons_par_reps:
-				doublon = doublons_par_reps.pop()
-				if len(doublon[1]) > 3:
-					str_cmp = grey_digits(doublon[1][0])
-					exclude = True
-					for i in xrange(1, len(doublon[1])):
-						if grey_digits(doublon[1][i]) != str_cmp:
-							exclude = False
-							break
-					if exclude: continue
-				doublons_par_reps2.append(doublon)
-			doublons_par_reps = doublons_par_reps2
-			if verbose: print 'tuples restants :', len(doublons_par_reps)
-			
-		if verbose: print
-
-		if args.directory_sorting:
-			# tri par nombre de repertoires concernes (decroissant) puis alphabetique par répertoires
-			# (-len(t), '*'.join([s[0] for s in t] + t))
-			doublons_par_reps2 = []
-			while doublons_par_reps:
-				doublon = doublons_par_reps.pop()
-				roots = doublon[0]
-				cmp_str = ''
-				c = max([len(s) for s in roots])
-				for i in xrange(c):
-					for root in roots:
-						if i < len(root):
-							cmp_str += root[i]
-				cmp_tuple = -len(roots), cmp_str
-				doublons_par_reps2.append((doublon, cmp_tuple))
-			doublons_par_reps2.sort(key=lambda item: item[1], reverse=True)
-			while doublons_par_reps2:
-				doublons_par_reps.append(doublons_par_reps2.pop()[0])
-		else:
-			# tri par nombre de resultats decroissant
-			doublons_par_reps.sort(key=lambda item:(-len(item[1]), item[0]))
-
-		for doublon in doublons_par_reps:
-			for root in doublon[0]:
-				print root
-			print len(doublon[1]), 'fichiers en commun',
-			if args.view_max_file_count != 0:
-				print ':'
-				print
-				doublon[1].sort()
-				i = 0
-				for file in doublon[1]:
-					if i == args.view_max_file_count:
-						print '  ...'
-						break
-					print u'  {}'.format(file)
-					i += 1
-			else: print '.'
-			print
-			
-class fake_fd:
-	def write(self, text): pass
-	def flush(self): pass
-
-def opened_log_file(filename):
-	mode, encoding = 'w', 'utf8'
-	try:
-		log_fd = codecs.open(filename, mode, encoding)
-		return log_fd
-	except:
-		msg = 'An error occured while opening "{}" (mode=\'{}\', encoding=\'{}\') !'.format(filename, mode, encoding)
-		raise argparse.ArgumentTypeError(msg)
-
-def try_int(value_str): # -> success, value
-	success = True
-	try:
-		value = int(value_str)
-	except:
-		success = False
-		value = None
-	return success, value
-	
-def file_path(path):
-	ok = True
-	if os.access(path, os.F_OK):
-		if not os.access(path, os.R_OK | os.W_OK):
-			ok = False
-	else:
-		try:
-			f = open(path, 'w')
-			f.close()
-			os.remove(path)
-		except:
-			ok = False
-	if ok: return path
-	else: raise argparse.ArgumentTypeError(path + ' : Access denied !')
-
-def file_size(value_str):
-	msg = ''
-	if value_str[-1] == 'B': value_str = value_str[:-1]
-	mult = 1
-	mults = ('k','M','G','T')
-	if value_str and value_str[-1] in mults:
-		mult = 1024**( mults.index(value_str[-1]) + 1 )
-		value_str = value_str[:-1]
-	if value_str:
-		success, value = try_int(value_str)
-		if success:
-			if value >= 0: return value * mult
-			else: msg = 'Negative values are not allowed !'
-		else: msg = "'{}' is not an integer !".format(value_str)
-	else: msg = '<size> is empty !'.format(value_str)
-	raise argparse.ArgumentTypeError(msg)
-	
-def _check_drive(letter):
-	if ord(letter) not in range(ord('A'), ord('Z')+1):
-		raise argparse.ArgumentTypeError("'{}' is not a drive letter".format(letter))
-
-def drives_letters(drives_str):
-	drives = drives_str[0].upper()
-	if len(drives_str) > 1: drives += drives_str[1:].replace(':', '').upper()
-	for drive in drives:
-		_check_drive(drive)
-	return drives
-	
-def drive(drive_str):
-	if len(drive_str) == 1 or (len(drive_str) == 2 and drive_str[1] == ':'):
-		letter = drive_str[0].upper()
-	else:
-		raise argparse.ArgumentTypeError("'{}' is too long to be a drive letter".format(drive_str))
-	_check_drive(letter)
-	return letter
-
 parser = argparse.ArgumentParser(description='locate files in a managed database')
-parser.add_argument('-d', '--db-filepath', type=file_path, default='c:/files.db', metavar='<path>', help='files database file path')
-parser.add_argument('--drives', type=drives_letters, metavar='<drives>',
+parser.add_argument('-d', '--db-filepath', type=args_types.file_path, default='c:/files.db', metavar='<path>', help='files database file path')
+parser.add_argument('--drives', type=args_types.drives_letters, metavar='<drives>',
 	help="restrict action to some drives (ex: '--drives dE:h:Gp') ('x:' = 'x' = 'X' = 'X:')")
 parser.add_argument('-u', '--updatedb', action='store_true',
 	help='update files database before processing')
-parser.add_argument('-l', '--log-file', type=opened_log_file, metavar='<log_file>',
+parser.add_argument('-l', '--log-file', type=args_types.opened_log_file, metavar='<log_file>',
 	help="use %(metavar)s as main output with utf8 encoding and convert stdout to 'replace' mode if --no-stdout is not present.")
 parser.add_argument('-n', '--no-stdout', action='store_true')
 parser.add_argument('-q', '--quiet', action='count', default=0)
@@ -343,14 +127,14 @@ parser_find.add_argument('-i', '--ignore-case', action='store_true')
 parser_find.set_defaults(func=find)
 
 parser_updatedb = subparsers.add_parser('updatedb', help='update database')
-parser_updatedb.add_argument('-x', '--exclude-drives', type=drive, nargs='*', default=('C',), metavar='<drive>',
+parser_updatedb.add_argument('-x', '--exclude-drives', type=args_types.drive, nargs='*', default=('C',), metavar='<drive>',
 	help="do not update data for these drives (default: C)")
 parser_updatedb.add_argument('-r', '--repport', action='store_true',
 	help='print database repport')
 parser_updatedb.set_defaults(func=updatedb)
 
 parser_duplicates = subparsers.add_parser('duplicates', help='find duplicate files in database')
-parser_duplicates.add_argument('-t', '--file-size-threshold', type=file_size, nargs='?', const='2MB', default=0, metavar='<file_size>',
+parser_duplicates.add_argument('-t', '--file-size-threshold', type=args_types.file_size, nargs='?', const='2MB', default=0, metavar='<file_size>',
 	help="File size threshold (smaller ones are ignored). %(metavar)s syntax is '<integer>[kMGT][B]'. Example: '500kB' (default: %(const)s)")
 parser_duplicates.add_argument('-d', '--directory-sorting', action='store_true',
 	help='Sort by decreasing directories count, then by directories names. Default sort is by decreasing file count.')
