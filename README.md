@@ -6,14 +6,15 @@ Written for Windows. On Linux updatedb and locate commands do the job (except fo
 TODO :
 - [x] add --db-filepath option
 - [x] add --exclude-drives option to updatedb action
-- [ ] add --drives option to restrict actions to these drives
+- [x] add --drives option to restrict actions to these drives
 - [ ] code refactoring
 - [ ] using filters before find (ex: file-size-threshold)
 - [ ] more...
 
 ###### locate.py -h :
 ```
-usage: locate.py [-h] [-d <path>] [-u] [-l <log_file>] [-n] [-q]
+usage: locate.py [-h] [-d <path>] [--drives <drives>] [-u] [-l <log_file>]
+                 [-n] [-q]
                  {find,updatedb,duplicates} ...
 
 locate files in a managed database
@@ -28,6 +29,8 @@ optional arguments:
   -h, --help            show this help message and exit
   -d <path>, --db-filepath <path>
                         files database file path
+  --drives <drives>     restrict action to some drives (ex: '--drives
+                        dE:h:Gp') ('x:' = 'x' = 'X' = 'X:')
   -u, --updatedb        update files database before processing
   -l <log_file>, --log-file <log_file>
                         use <log_file> as main output with utf8 encoding and
@@ -56,7 +59,7 @@ usage: locate.py updatedb [-h] [-x [<drive> [<drive> ...]]] [-r]
 optional arguments:
   -h, --help            show this help message and exit
   -x [<drive> [<drive> ...]], --exclude-drives [<drive> [<drive> ...]]
-                        do not update data for these drives
+                        do not update data for these drives (default: C)
   -r, --repport         print database repport
 ```
 
