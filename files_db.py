@@ -39,8 +39,8 @@ class FilesDb:
 			return False
 		
 	def clear(self, drive=None): # clear db
-		if drive in self._db: del self._db[drive]
-		else: self._init_db()
+		if drive is None: self._init_db()
+		elif drive in self._db: del self._db[drive]
 		
 	def drives(self): # -> [ drive, ... ]
 		#return [drive for drive, files in self._db]

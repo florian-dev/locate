@@ -89,6 +89,9 @@ def _repport(db):
 	else: print 'database is empty.'
 
 def updatedb(db, args):
+	if args.func == updatedb and args.clean_drives:
+		for drive in args.clean_drives:
+			db.clear(drive)
 	_updatedb(db, args)
 	if args.quiet < 1: _size_not_found_report(db)
 	_savedb(db, args.quiet < 2)
@@ -96,10 +99,13 @@ def updatedb(db, args):
 		_repport(db)
 	
 def find(db, args):
+	drives = args.drives
+	if drives is None: drives = db.drives()
+	if args.exclude_drives: drives = [drive for drive in drives if drive not in args.exclude_drives]
 	matches = db.find(args.pattern, args.ignore_case)
 	matches.sort()
 	for root, file, size in matches:
-		if root[0].upper() not in args.drives: continue
+		if root[0].upper() not in drives: continue
 		print join(root, file), '(', hr_size(size), ')'
 		
 parser = argparse.ArgumentParser(description='locate files in a managed database')
@@ -107,7 +113,7 @@ parser.add_argument('-d', '--db-filepath', type=args_types.file_path, default='c
 parser.add_argument('--drives', type=args_types.drives_letters, metavar='<drives>',
 	help="restrict action to some drives (ex: '--drives dE:h:Gp') ('x:' = 'x' = 'X' = 'X:')")
 parser.add_argument('-x', '--exclude-drives', type=args_types.drives_letters, nargs='?', const='', default='C', metavar='<drives>',
-	help="do not update data for these drives (default: %(default)s)")
+	help="do not update or use data for these drives (default: %(default)s)")
 parser.add_argument('-u', '--updatedb', action='store_true',
 	help='update files database before processing')
 parser.add_argument('-l', '--log-file', type=args_types.opened_log_file, metavar='<log_file>',
@@ -125,6 +131,8 @@ parser_find.set_defaults(func=find)
 parser_updatedb = subparsers.add_parser('updatedb', help='update database')
 parser_updatedb.add_argument('-r', '--repport', action='store_true',
 	help='print database repport')
+parser_updatedb.add_argument('-c', '--clean-drives', type=args_types.drives_letters, metavar='<drives>',
+	help='clean data for these drives before update')
 parser_updatedb.set_defaults(func=updatedb)
 
 parser_duplicates = subparsers.add_parser('duplicates', help='find duplicate files in database')
@@ -154,8 +162,8 @@ if args.log_file:
 elif args.no_stdout: sys.stdout = fake_fd()
 
 db = files_db.FilesDb(exclude_drives=args.exclude_drives, db_filepath=args.db_filepath)
-if args.drives is None: args.drives = db.drives()
-if args.exclude_drives: args.drives = [drive for drive in args.drives if drive not in args.exclude_drives]
+#if args.drives is None: args.drives = db.drives()
+if args.drives and args.exclude_drives: args.drives = [drive for drive in args.drives if drive not in args.exclude_drives]
 _loaddb(db, args.quiet < 2)
 if args.updatedb and args.func != updatedb: updatedb(db, args)
 if args.quiet < 2: print

@@ -2,18 +2,16 @@
 
 from common import hr_size
 
-def _files_gen(db, drives):
-	if drives is None:
-		for file in db.files():
+def _files_gen(db, drives, exclude_drives):
+	if drives is None: drives = db.drives()
+	if exclude_drives: drives = [drive for drive in drives if drive not in exclude_drives]
+	for drive in drives:
+		for file in db.files(drive):
 			yield file
-	else:
-		for drive in drives:
-			for file in db.files(drive):
-				yield file
 
 def duplicates(db, args):
 	verbose = args.quiet < 2
-	all_files = sorted(_files_gen(db, args.drives), key=lambda item: item[1])
+	all_files = sorted(_files_gen(db, args.drives, args.exclude_drives), key=lambda item: item[1])
 	c_all = len(all_files)
 		
 	seuil = args.file_size_threshold
