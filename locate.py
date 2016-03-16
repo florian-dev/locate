@@ -265,6 +265,16 @@ def file_size(value_str):
 		else: msg = "'{}' is not an integer !".format(value_str)
 	else: msg = '<size> is empty !'.format(value_str)
 	raise argparse.ArgumentTypeError(msg)
+	
+def drive(drive_str):
+	if len(drive_str) == 1 or (len(drive_str) == 2 and drive_str[1] == ':'):
+		letter = drive_str[0].upper()
+	else:
+		raise argparse.ArgumentTypeError("'{}' is too long to be a drive letter".format(drive_str))
+	if ord(letter) in range(ord('A'), ord('Z')+1):
+		return letter
+	else:
+		raise argparse.ArgumentTypeError("'{}' is not a letter".format(letter))
 
 parser = argparse.ArgumentParser(description='locate files in a managed database')
 parser.add_argument('-d', '--db-filepath', type=file_path, default='c:/files.db', metavar='<path>', help='files database file path')
@@ -283,6 +293,8 @@ parser_find.add_argument('-i', '--ignore-case', action='store_true')
 parser_find.set_defaults(func=find)
 
 parser_updatedb = subparsers.add_parser('updatedb', help='update database')
+parser_updatedb.add_argument('-x', '--exclude-drives', type=drive, nargs='*', default=('C',), metavar='<drive>',
+	help='do not update data for these drives')
 parser_updatedb.add_argument('-r', '--repport-total-size', action='store_true',
 	help='print sum of all files size in database')
 parser_updatedb.set_defaults(func=updatedb)
@@ -313,7 +325,7 @@ if args.log_file:
 				)
 elif args.no_stdout: sys.stdout = fake_fd()
 
-db = files_db.FilesDb(exclude_drives=('C','D','P'), db_filepath=args.db_filepath)
+db = files_db.FilesDb(exclude_drives=args.exclude_drives, db_filepath=args.db_filepath)
 _loaddb(db, args.quiet < 2)
 if args.updatedb and args.func != updatedb: updatedb(db, args)
 if args.quiet < 2: print
