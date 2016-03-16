@@ -10,7 +10,7 @@ TODO :
 
 ###### locate.py -h :
 ```
-usage: locate.py [-h] [-u] [-l <log_file>] [-n] [-q]
+usage: locate.py [-h] [-d <path>] [-u] [-l <log_file>] [-n] [-q]
                  {find,updatedb,duplicates} ...
 
 locate files in a managed database
@@ -23,6 +23,8 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
+  -d <path>, --db-filepath <path>
+                        files database file path
   -u, --updatedb        update files database before processing
   -l <log_file>, --log-file <log_file>
                         use <log_file> as main output with utf8 encoding and
@@ -46,12 +48,13 @@ optional arguments:
 
 ###### locate.py updatedb -h :
 ```
-usage: locate.py updatedb [-h] [-r]
+usage: locate.py updatedb [-h] [-x [<drive> [<drive> ...]]] [-r]
 
 optional arguments:
   -h, --help            show this help message and exit
-  -r, --repport-total-size
-                        print sum of all files size in database
+  -x [<drive> [<drive> ...]], --exclude-drives [<drive> [<drive> ...]]
+                        do not update data for these drives
+  -r, --repport         print database repport
 ```
 
 ###### locate.py duplicates -h :
