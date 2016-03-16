@@ -2,8 +2,8 @@
 Locate files using a simple managed database. Can find a file name pattern and seek for duplicates files.
 
 TODO :
-- [ ] add --db-filepath option
-- [ ] add --exclude-drives option to updatedb action
+- [x] add --db-filepath option
+- [x] add --exclude-drives option to updatedb action
 - [ ] code refactoring
 - [ ] using filters before find (ex: file-size-threshold)
 - [ ] more...
