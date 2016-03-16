@@ -67,22 +67,35 @@ def _updatedb(db, quiet):
 	else: c = db.update()
 	if quiet < 2: print '{} files updated in {} s'.format(c, round(time() - t0, 2))
 	
-def _repport_total_size(db):
+def _repport(db):
 	drives = db.drives()
 	if drives:
-		msg = '{} in '.format(_hr_size(db.size()))
-		c = len(drives)
-		if c > 1: msg += '{} drives.'.format(c)
-		else: msg += 'drive {}.'.format(drives[0])
-		print msg
+		header_str = '{:^9}|{:^13}|{:^16}'
+		separa_str = '{:-<9}+{:-<13}+{:-<16}'.format('','','')
+		values_str = '{:^9}|{:^13}|{:>15,}'
+		print header_str.format('Drive', 'Size', 'File count')
+		print separa_str
+		dc = 0 # drive count
+		ts = 0 # total size
+		tfc = 0 # total file count
+		for drive in drives:
+			s = db.size(drive)
+			ts += s
+			fc = db.len(drive)
+			tfc += fc
+			print values_str.format(drive, _hr_size(s), fc)
+			dc += 1
+		if dc > 1:
+			print separa_str
+			print values_str.format('All {}'.format(dc), _hr_size(ts), tfc)
 	else: print 'database is empty.'
 
 def updatedb(db, args):
 	_updatedb(db, args.quiet)
 	if args.quiet < 1: _size_not_found_report(db)
 	_savedb(db, args.quiet < 2)
-	if args.func == updatedb and args.repport_total_size:
-		_repport_total_size(db)
+	if args.func == updatedb and args.repport:
+		_repport(db)
 	
 def find(db, args):
 	matches = db.find(args.pattern, args.ignore_case)
@@ -295,8 +308,8 @@ parser_find.set_defaults(func=find)
 parser_updatedb = subparsers.add_parser('updatedb', help='update database')
 parser_updatedb.add_argument('-x', '--exclude-drives', type=drive, nargs='*', default=('C',), metavar='<drive>',
 	help='do not update data for these drives')
-parser_updatedb.add_argument('-r', '--repport-total-size', action='store_true',
-	help='print sum of all files size in database')
+parser_updatedb.add_argument('-r', '--repport', action='store_true',
+	help='print database repport')
 parser_updatedb.set_defaults(func=updatedb)
 
 parser_duplicates = subparsers.add_parser('duplicates', help='find duplicate files in database')

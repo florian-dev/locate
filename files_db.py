@@ -14,7 +14,12 @@ class FilesDb:
 		self._db = dict()
 		
 	def __len__(self):
-		return sum([len(files) for files in self._db.itervalues()])
+		return self.len()
+	
+	def len(self, drive=None):
+		if drive is None: return sum([len(files) for files in self._db.itervalues()])
+		elif drive in self._db: return len(self._db[drive])
+		else: return 0
 		
 	def load(self): # -> count of file entries loaded
 		try:
