@@ -38,7 +38,7 @@ def _size_not_found_report(db):
 			print path
 		print
 
-def _update_gen(drives):
+def _update_gen(db, drives):
 	if drives is None:
 		for file in db.update_gen():
 			yield file
@@ -47,12 +47,6 @@ def _update_gen(drives):
 			yield file
 
 def _updatedb(db, args):
-	if not args.drives is None:
-		drives = []
-		if args.drives:
-			if args.func == updatedb and args.exclude_drives:
-				drives = [drive for drive in args.drives if drive not in args.exclude_drives]
-			else: drives = args.drives
 	if args.quiet < 2: print 'updating files database ...',
 	t0 = time()
 	if args.quiet < 1:
@@ -60,7 +54,7 @@ def _updatedb(db, args):
 		c = 0
 		s = 0
 		t = t0
-		for root, file, size in _update_gen(drives):
+		for root, file, size in _update_gen(db, args.drives):
 			c += 1
 			s += size
 			if time() - t > 2:
@@ -68,7 +62,7 @@ def _updatedb(db, args):
 				t = time()
 	else:
 		if args.drives is None: c = db.update()
-		else: c = db.update_drives(drives)
+		else: c = db.update_drives(args.drives)
 	if args.quiet < 2: print '{} files updated in {} s'.format(c, round(time() - t0, 2))
 	
 def _repport(db):
@@ -105,13 +99,15 @@ def find(db, args):
 	matches = db.find(args.pattern, args.ignore_case)
 	matches.sort()
 	for root, file, size in matches:
-		if args.drives and root[0].upper() not in args.drives: continue
+		if root[0].upper() not in args.drives: continue
 		print join(root, file), '(', hr_size(size), ')'
 		
 parser = argparse.ArgumentParser(description='locate files in a managed database')
 parser.add_argument('-d', '--db-filepath', type=args_types.file_path, default='c:/files.db', metavar='<path>', help='files database file path')
 parser.add_argument('--drives', type=args_types.drives_letters, metavar='<drives>',
 	help="restrict action to some drives (ex: '--drives dE:h:Gp') ('x:' = 'x' = 'X' = 'X:')")
+parser.add_argument('-x', '--exclude-drives', type=args_types.drives_letters, nargs='?', const='', default='C', metavar='<drives>',
+	help="do not update data for these drives (default: %(default)s)")
 parser.add_argument('-u', '--updatedb', action='store_true',
 	help='update files database before processing')
 parser.add_argument('-l', '--log-file', type=args_types.opened_log_file, metavar='<log_file>',
@@ -127,8 +123,6 @@ parser_find.add_argument('-i', '--ignore-case', action='store_true')
 parser_find.set_defaults(func=find)
 
 parser_updatedb = subparsers.add_parser('updatedb', help='update database')
-parser_updatedb.add_argument('-x', '--exclude-drives', type=args_types.drive, nargs='*', default=('C',), metavar='<drive>',
-	help="do not update data for these drives (default: C)")
 parser_updatedb.add_argument('-r', '--repport', action='store_true',
 	help='print database repport')
 parser_updatedb.set_defaults(func=updatedb)
@@ -159,8 +153,9 @@ if args.log_file:
 				)
 elif args.no_stdout: sys.stdout = fake_fd()
 
-if args.func != updatedb: args.exclude_drives = ('C',)
 db = files_db.FilesDb(exclude_drives=args.exclude_drives, db_filepath=args.db_filepath)
+if args.drives is None: args.drives = db.drives()
+if args.exclude_drives: args.drives = [drive for drive in args.drives if drive not in args.exclude_drives]
 _loaddb(db, args.quiet < 2)
 if args.updatedb and args.func != updatedb: updatedb(db, args)
 if args.quiet < 2: print

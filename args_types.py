@@ -42,19 +42,21 @@ def _check_drive(letter):
 		raise argparse.ArgumentTypeError("'{}' is not a drive letter".format(letter))
 
 def drives_letters(drives_str):
-	drives = drives_str[0].upper()
-	if len(drives_str) > 1: drives += drives_str[1:].replace(':', '').upper()
-	for drive in drives:
-		_check_drive(drive)
-	return drives
+	if drives_str:
+		drives = drives_str[0].upper()
+		if len(drives_str) > 1: drives += drives_str[1:].replace(':', '').upper()
+		for drive in drives:
+			_check_drive(drive)
+		return drives
+	else: return ''
 	
-def drive(drive_str):
-	if len(drive_str) == 1 or (len(drive_str) == 2 and drive_str[1] == ':'):
-		letter = drive_str[0].upper()
-	else:
-		raise argparse.ArgumentTypeError("'{}' is too long to be a drive letter".format(drive_str))
-	_check_drive(letter)
-	return letter
+#def drive(drive_str):
+#	if len(drive_str) == 1 or (len(drive_str) == 2 and drive_str[1] == ':'):
+#		letter = drive_str[0].upper()
+#	else:
+#		raise argparse.ArgumentTypeError("'{}' is too long to be a drive letter".format(drive_str))
+#	_check_drive(letter)
+#	return letter
 
 def file_path(path):
 	ok = True
