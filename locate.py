@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 import os, sys, pickle, codecs
-from os.path import join
+from os.path import join, abspath, dirname
 from time import time
 import tee
 import files_db
@@ -22,7 +22,7 @@ def _hr_size(size): # -> human readable file size (ex: '698.43 MB')
 		
 def _loaddb(db, verbose=False):
 	if verbose:
-		print "loading database ...",
+		print 'loading database ...',
 		t = time()
 	c = db.load()
 	if verbose:
@@ -233,6 +233,21 @@ def try_int(value_str): # -> success, value
 		success = False
 		value = None
 	return success, value
+	
+def file_path(path):
+	ok = True
+	if os.access(path, os.F_OK):
+		if not os.access(path, os.R_OK | os.W_OK):
+			ok = False
+	else:
+		try:
+			f = open(path, 'w')
+			f.close()
+			os.remove(path)
+		except:
+			ok = False
+	if ok: return path
+	else: raise argparse.ArgumentTypeError(path + ' : Access denied !')
 
 def file_size(value_str):
 	msg = ''
@@ -248,13 +263,14 @@ def file_size(value_str):
 			if value >= 0: return value * mult
 			else: msg = 'Negative values are not allowed !'
 		else: msg = "'{}' is not an integer !".format(value_str)
-	else: msg = "<size> is empty !".format(value_str)
+	else: msg = '<size> is empty !'.format(value_str)
 	raise argparse.ArgumentTypeError(msg)
 
 parser = argparse.ArgumentParser(description='locate files in a managed database')
-parser.add_argument("-u", "--updatedb", action="store_true",
+parser.add_argument('-d', '--db-filepath', type=file_path, default='c:/files.db', metavar='<path>', help='files database file path')
+parser.add_argument('-u', '--updatedb', action='store_true',
 	help='update files database before processing')
-parser.add_argument("-l", "--log-file", type=opened_log_file, metavar='<log_file>',
+parser.add_argument('-l', '--log-file', type=opened_log_file, metavar='<log_file>',
 	help="use %(metavar)s as main output with utf8 encoding and convert stdout to 'replace' mode if --no-stdout is not present.")
 parser.add_argument('-n', '--no-stdout', action='store_true')
 parser.add_argument('-q', '--quiet', action='count', default=0)
@@ -272,16 +288,16 @@ parser_updatedb.add_argument('-r', '--repport-total-size', action='store_true',
 parser_updatedb.set_defaults(func=updatedb)
 
 parser_duplicates = subparsers.add_parser('duplicates', help='find duplicate files in database')
-parser_duplicates.add_argument("-t", "--file-size-threshold", type=file_size, nargs='?', const='2MB', default=0, metavar='<file_size>',
+parser_duplicates.add_argument('-t', '--file-size-threshold', type=file_size, nargs='?', const='2MB', default=0, metavar='<file_size>',
 	help="File size threshold (smaller ones are ignored). %(metavar)s syntax is '<integer>[kMGT][B]'. Example: '500kB' (default: %(const)s)")
-parser_duplicates.add_argument("-d", "--directory-sorting", action="store_true",
+parser_duplicates.add_argument('-d', '--directory-sorting', action='store_true',
 	help='Sort by decreasing directories count, then by directories names. Default sort is by decreasing file count.')
-parser_duplicates.add_argument("-m", "--min-file-count", type=int, nargs='?', const=6, default=1, metavar='<count>',
+parser_duplicates.add_argument('-m', '--min-file-count', type=int, nargs='?', const=6, default=1, metavar='<count>',
 	help='Exclude results with less than %(metavar)s duplicate files. (default: %(const)s)')
-parser_duplicates.add_argument("-v", "--view-max-file-count", type=int, nargs='?', const=15, default=-1, metavar='<count>',
+parser_duplicates.add_argument('-v', '--view-max-file-count', type=int, nargs='?', const=15, default=-1, metavar='<count>',
 	help='Print only first %(metavar)s file(s) per result. (default: %(const)s)')
-parser_duplicates.add_argument("-f", '--filter-01', action="store_true",
-	help="filter 1 : ignore results with more than three files and whose all filenames are same except for digits characters (0-9)")
+parser_duplicates.add_argument('-f', '--filter-01', action='store_true',
+	help='filter 1 : ignore results with more than three files and whose all filenames are same except for digits characters (0-9)')
 parser_duplicates.set_defaults(func=duplicates)
 
 args = parser.parse_args()
@@ -297,7 +313,7 @@ if args.log_file:
 				)
 elif args.no_stdout: sys.stdout = fake_fd()
 
-db = files_db.FilesDb(exclude_drives=('C','D','P'), db_filepath='c:/zzz/files.db')
+db = files_db.FilesDb(exclude_drives=('C','D','P'), db_filepath=args.db_filepath)
 _loaddb(db, args.quiet < 2)
 if args.updatedb and args.func != updatedb: updatedb(db, args)
 if args.quiet < 2: print
