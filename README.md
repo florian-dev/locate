@@ -4,7 +4,7 @@ Locate files using a simple managed database. Can find a file name pattern and s
 Written for Windows. On Linux updatedb and locate commands do the job (except for duplicates seek), and I don't know MacOs.
 
 TODO :
-- [ ] add --clean-drives option to updatedb action
+- [x] add --clean-drives option to updatedb action
 - [ ] using filters for find action (ex: file-size-threshold)
 
 ###### locate.py -h :
@@ -28,7 +28,8 @@ optional arguments:
   --drives <drives>     restrict action to some drives (ex: '--drives
                         dE:h:Gp') ('x:' = 'x' = 'X' = 'X:')
   -x [<drives>], --exclude-drives [<drives>]
-                        do not update data for these drives (default: C)
+                        do not update or use data for these drives (default:
+                        C)
   -u, --updatedb        update files database before processing
   -l <log_file>, --log-file <log_file>
                         use <log_file> as main output with utf8 encoding and
@@ -52,11 +53,13 @@ optional arguments:
 
 ###### locate.py updatedb -h :
 ```
-usage: locate.py updatedb [-h] [-r]
+usage: locate.py updatedb [-h] [-r] [-c <drives>]
 
 optional arguments:
-  -h, --help     show this help message and exit
-  -r, --repport  print database repport
+  -h, --help            show this help message and exit
+  -r, --repport         print database repport
+  -c <drives>, --clean-drives <drives>
+                        clean data for these drives before update
 ```
 
 ###### locate.py duplicates -h :
