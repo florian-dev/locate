@@ -91,7 +91,7 @@ def duplicates(db, args):
 			
 		if verbose: print
 
-		if args.directory_sorting:
+		if args.sort_criteria == 'directory':
 			# tri par nombre de repertoires concernes (decroissant) puis alphabetique par répertoires
 			# (-len(t), '*'.join([s[0] for s in t] + t))
 			doublons_par_reps2 = []
@@ -109,7 +109,7 @@ def duplicates(db, args):
 			doublons_par_reps2.sort(key=lambda item: item[1], reverse=True)
 			while doublons_par_reps2:
 				doublons_par_reps.append(doublons_par_reps2.pop()[0])
-		else:
+		elif args.sort_criteria == 'file':
 			# tri par nombre de resultats decroissant
 			doublons_par_reps.sort(key=lambda item:(-len(item[1]), item[0]))
 

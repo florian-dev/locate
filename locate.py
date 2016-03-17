@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 
-import sys, codecs
+import sys, codecs, textwrap
 from os.path import join
 from time import time
 import argparse
@@ -100,50 +100,71 @@ def updatedb(db, args):
 	
 def find(db, args):
 	drives = args.drives
-	if drives is None: drives = db.drives()
-	if args.exclude_drives: drives = [drive for drive in drives if drive not in args.exclude_drives]
+	if args.exclude_drives:
+		if drives is None: drives = db.drives()
+		drives = [drive for drive in drives if drive not in args.exclude_drives]
 	matches = db.find(args.pattern, args.ignore_case)
 	matches.sort()
 	for root, file, size in matches:
-		if root[0].upper() not in drives: continue
+		if not drives is None and root[0].upper() not in drives: continue
 		print join(root, file), '(', hr_size(size), ')'
 		
-parser = argparse.ArgumentParser(description='locate files in a managed database')
-parser.add_argument('-d', '--db-filepath', type=args_types.file_path, default='c:/files.db', metavar='<path>', help='files database file path')
-parser.add_argument('--drives', type=args_types.drives_letters, metavar='<drives>',
-	help="restrict action to some drives (ex: '--drives dE:h:Gp') ('x:' = 'x' = 'X' = 'X:')")
-parser.add_argument('-x', '--exclude-drives', type=args_types.drives_letters, nargs='?', const='', default='C', metavar='<drives>',
-	help="do not update or use data for these drives (default: %(default)s)")
-parser.add_argument('-u', '--updatedb', action='store_true',
+general_options_parser = argparse.ArgumentParser(add_help=False)
+general_options = general_options_parser.add_argument_group('general options')
+general_options.add_argument('-p', '--db-filepath', type=args_types.file_path, default='c:/files.db', metavar='<path>', help='files database file path')
+general_options.add_argument('-d', '--drives', type=args_types.drives_letters, metavar='<drives>',
+	help='restrict action to some drives')
+general_options.add_argument('-x', '--exclude-drives', type=args_types.drives_letters, nargs='?', const='', default='C', metavar='<drives>',
+	help='do not update or use data for these drives')
+general_options.add_argument('-u', '--updatedb', action='store_true',
 	help='update files database before processing')
-parser.add_argument('-l', '--log-file', type=args_types.opened_log_file, metavar='<log_file>',
+general_options.add_argument('-l', '--log-file', type=args_types.opened_log_file, metavar='<log_file>',
 	help="use %(metavar)s as main output with utf8 encoding and convert stdout to 'replace' mode if --no-stdout is not present.")
-parser.add_argument('-n', '--no-stdout', action='store_true')
-parser.add_argument('-q', '--quiet', action='count', default=0)
+general_options.add_argument('-n', '--no-stdout', action='store_true')
+general_options.add_argument('-q', '--quiet', action='count', default=0)
 
-subparsers = parser.add_subparsers()
+parser = argparse.ArgumentParser(description='locate files in a managed database')
+subparsers = parser.add_subparsers(title='commands')
 
-parser_find = subparsers.add_parser('find', help='find files in database')
-parser_find.add_argument('pattern')
+syntax_strings = {	'drives': "<drives>    : (<letter>[:])+        Example: 'dE:h:Gp'",
+					'file_size': "<file_size> : <integer>[kMGT][B]    Example: '500kB'" }
+description_strings = {	'find': 'find files in database',
+						'updatedb': 'update database',
+						'duplicates': 'find duplicate files in database' }
+formatter_class_combo = type('combo', (argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter), dict())
+
+cmd = 'find'
+parser_find = subparsers.add_parser(cmd, usage='%(prog)s [options] pattern', parents=[general_options_parser],
+	formatter_class=formatter_class_combo, epilog='\n'.join(syntax_strings.itervalues()),
+	help=description_strings[cmd], description=description_strings[cmd])
+parser_find.add_argument('pattern', help="filname pattern to search for. It can contain '*'")
 parser_find.add_argument('-i', '--ignore-case', action='store_true')
+#parser_find.add_argument('-t', '--file-size-threshold', type=args_types.file_size, default=0, metavar='<file_size>',
+#	help='File size threshold (smaller ones are ignored).')
 parser_find.set_defaults(func=find)
 
-parser_updatedb = subparsers.add_parser('updatedb', help='update database')
+cmd = 'updatedb'
+parser_updatedb = subparsers.add_parser(cmd, usage='%(prog)s [options]', parents=[general_options_parser],
+	formatter_class=formatter_class_combo, epilog=syntax_strings['drives'],
+	help=description_strings[cmd], description=description_strings[cmd])
 parser_updatedb.add_argument('-r', '--repport', action='store_true',
 	help='print database repport')
 parser_updatedb.add_argument('-c', '--clean-drives', type=args_types.drives_letters, metavar='<drives>',
 	help='clean data for these drives before update')
 parser_updatedb.set_defaults(func=updatedb)
 
-parser_duplicates = subparsers.add_parser('duplicates', help='find duplicate files in database')
+cmd = 'duplicates'
+parser_duplicates = subparsers.add_parser(cmd, usage='%(prog)s [options]', parents=[general_options_parser],
+	formatter_class=formatter_class_combo, epilog='\n'.join(syntax_strings.itervalues()),
+	help=description_strings[cmd], description=description_strings[cmd])
 parser_duplicates.add_argument('-t', '--file-size-threshold', type=args_types.file_size, nargs='?', const='2MB', default=0, metavar='<file_size>',
-	help="File size threshold (smaller ones are ignored). %(metavar)s syntax is '<integer>[kMGT][B]'. Example: '500kB' (default: %(const)s)")
-parser_duplicates.add_argument('-d', '--directory-sorting', action='store_true',
-	help='Sort by decreasing directories count, then by directories names. Default sort is by decreasing file count.')
+	help='File size threshold (smaller ones are ignored). (implicit value: %(const)s)')
+parser_duplicates.add_argument('-s', '--sort-criteria', choices=['file','directory'], default='file',
+	help="Sort criteria : 'file' (default) = by decreasing file count ; 'directory' = by decreasing directories count, then by directories names")
 parser_duplicates.add_argument('-m', '--min-file-count', type=int, nargs='?', const=6, default=1, metavar='<count>',
-	help='Exclude results with less than %(metavar)s duplicate files. (default: %(const)s)')
+	help='Exclude results with less than %(metavar)s duplicate files. (implicit value: %(const)s)')
 parser_duplicates.add_argument('-v', '--view-max-file-count', type=int, nargs='?', const=15, default=-1, metavar='<count>',
-	help='Print only first %(metavar)s file(s) per result. (default: %(const)s)')
+	help='Print only first %(metavar)s file(s) per result. (implicit value: %(const)s)')
 parser_duplicates.add_argument('-f', '--filter-01', action='store_true',
 	help='filter 1 : ignore results with more than three files and whose all filenames are same except for digits characters (0-9)')
 parser_duplicates.set_defaults(func=duplicates)
