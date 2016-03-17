@@ -106,6 +106,7 @@ def find(db, args):
 	matches = db.find(args.pattern, args.ignore_case)
 	matches.sort()
 	for root, file, size in matches:
+		if size < args.file_size_threshold: continue
 		if not drives is None and root[0].upper() not in drives: continue
 		print join(root, file), '(', hr_size(size), ')'
 		
@@ -139,8 +140,8 @@ parser_find = subparsers.add_parser(cmd, usage='%(prog)s [options] pattern', par
 	help=description_strings[cmd], description=description_strings[cmd])
 parser_find.add_argument('pattern', help="filname pattern to search for. It can contain '*'")
 parser_find.add_argument('-i', '--ignore-case', action='store_true')
-#parser_find.add_argument('-t', '--file-size-threshold', type=args_types.file_size, default=0, metavar='<file_size>',
-#	help='File size threshold (smaller ones are ignored).')
+parser_find.add_argument('-t', '--file-size-threshold', type=args_types.file_size, default=0, metavar='<file_size>',
+	help='File size threshold (smaller ones are ignored).')
 parser_find.set_defaults(func=find)
 
 cmd = 'updatedb'
