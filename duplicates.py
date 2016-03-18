@@ -66,7 +66,7 @@ def duplicates(db, args):
 			
 		# filtre 1 : enlève les résultats contenant plus de trois fichiers et dont les noms de fichiers (tous)
 		#            sont identiques à l'exception des éventuels caractères numériques (0-9)
-		if args.filter_01:
+		if args.filter and 1 in args.filter:
 			def grey_digits(string):
 				grey_str = string
 				for digit in '0123456789':

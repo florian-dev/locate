@@ -120,7 +120,7 @@ general_options.add_argument('-x', '--exclude-drives', type=args_types.drives_le
 general_options.add_argument('-u', '--updatedb', action='store_true',
 	help='update files database before processing')
 general_options.add_argument('-l', '--log-file', type=args_types.opened_log_file, metavar='<log_file>',
-	help="use %(metavar)s as main output with utf8 encoding and convert stdout to 'replace' mode if --no-stdout is not present.")
+	help="use %(metavar)s as main output with utf8 encoding and convert stdout to 'replace' mode if --no-stdout is not present")
 general_options.add_argument('-n', '--no-stdout', action='store_true')
 general_options.add_argument('-q', '--quiet', action='count', default=0)
 
@@ -135,39 +135,49 @@ description_strings = {	'find': 'find files in database',
 formatter_class_combo = type('combo', (argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter), dict())
 
 cmd = 'find'
-parser_find = subparsers.add_parser(cmd, usage='%(prog)s [options] pattern', parents=[general_options_parser],
+parser_find = subparsers.add_parser(cmd, usage='%(prog)s [options] pattern', parents=[general_options_parser], add_help=False,
 	formatter_class=formatter_class_combo, epilog='\n'.join(syntax_strings.itervalues()),
 	help=description_strings[cmd], description=description_strings[cmd])
-parser_find.add_argument('pattern', help="filname pattern to search for. It can contain '*'")
-parser_find.add_argument('-i', '--ignore-case', action='store_true')
-parser_find.add_argument('-t', '--file-size-threshold', type=args_types.file_size, default=0, metavar='<file_size>',
-	help='File size threshold (smaller ones are ignored).')
+parser_find.add_argument('pattern', help="filname pattern to search for ; pattern can contain '*' to widen results")
+find_options = parser_find.add_argument_group('find options')
+find_options.add_argument('-h', '--help', action='help', help='show this help message and exit')
+find_options.add_argument('-i', '--ignore-case', action='store_true')
+find_options.add_argument('-t', '--file-size-threshold', type=args_types.file_size, default=0, metavar='<file_size>',
+	help='file size threshold (smaller ones are ignored)')
 parser_find.set_defaults(func=find)
 
 cmd = 'updatedb'
-parser_updatedb = subparsers.add_parser(cmd, usage='%(prog)s [options]', parents=[general_options_parser],
+parser_updatedb = subparsers.add_parser(cmd, usage='%(prog)s [options]', parents=[general_options_parser], add_help=False,
 	formatter_class=formatter_class_combo, epilog=syntax_strings['drives'],
 	help=description_strings[cmd], description=description_strings[cmd])
-parser_updatedb.add_argument('-r', '--repport', action='store_true',
+updatedb_options = parser_updatedb.add_argument_group('updatedb options')
+updatedb_options.add_argument('-h', '--help', action='help', help='show this help message and exit')
+updatedb_options.add_argument('-r', '--repport', action='store_true',
 	help='print database repport')
-parser_updatedb.add_argument('-c', '--clean-drives', type=args_types.drives_letters, metavar='<drives>',
+updatedb_options.add_argument('-c', '--clean-drives', type=args_types.drives_letters, metavar='<drives>',
 	help='clean data for these drives before update')
 parser_updatedb.set_defaults(func=updatedb)
 
 cmd = 'duplicates'
-parser_duplicates = subparsers.add_parser(cmd, usage='%(prog)s [options]', parents=[general_options_parser],
+parser_duplicates = subparsers.add_parser(cmd, usage='%(prog)s [options]', parents=[general_options_parser], add_help=False,
 	formatter_class=formatter_class_combo, epilog='\n'.join(syntax_strings.itervalues()),
 	help=description_strings[cmd], description=description_strings[cmd])
-parser_duplicates.add_argument('-t', '--file-size-threshold', type=args_types.file_size, nargs='?', const='2MB', default=0, metavar='<file_size>',
-	help='File size threshold (smaller ones are ignored). (implicit value: %(const)s)')
-parser_duplicates.add_argument('-s', '--sort-criteria', choices=['file','directory'], default='file',
-	help="Sort criteria : 'file' (default) = by decreasing file count ; 'directory' = by decreasing directories count, then by directories names")
-parser_duplicates.add_argument('-m', '--min-file-count', type=int, nargs='?', const=6, default=1, metavar='<count>',
-	help='Exclude results with less than %(metavar)s duplicate files. (implicit value: %(const)s)')
-parser_duplicates.add_argument('-v', '--view-max-file-count', type=int, nargs='?', const=15, default=-1, metavar='<count>',
-	help='Print only first %(metavar)s file(s) per result. (implicit value: %(const)s)')
-parser_duplicates.add_argument('-f', '--filter-01', action='store_true',
-	help='filter 1 : ignore results with more than three files and whose all filenames are same except for digits characters (0-9)')
+duplicates_options = parser_duplicates.add_argument_group('duplicates options')
+duplicates_options.add_argument('-h', '--help', action='help', help='show this help message and exit')
+duplicates_options.add_argument('-s', '--sort-criteria', choices=['file','directory'], default='file',
+	help="sort criteria : 'file' (default) = by decreasing file count ; 'directory' = by decreasing directories count, then by directories names")
+duplicates_options.add_argument('-v', '--view-max-file-count', type=int, nargs='?', const=15, default=-1, metavar='<count>',
+	help='print only first %(metavar)s file(s) per result (implicit value: %(const)s)')
+filter_options = parser_duplicates.add_argument_group('filters', description=textwrap.dedent('''\
+	filter  1 :  ignore results with more than three files and whose all
+	             filenames are same except for digits characters (0-9)
+	'''))
+filter_options.add_argument('-f', '--filter', action='append', choices=[1],
+	help='apply one filter among those listed above. this option can be mentioned several times')
+filter_options.add_argument('-t', '--file-size-threshold', type=args_types.file_size, nargs='?', const='2MB', default=0, metavar='<file_size>',
+	help='file size threshold (smaller ones are ignored) (implicit value: %(const)s)')
+filter_options.add_argument('-m', '--min-file-count', type=int, nargs='?', const=6, default=1, metavar='<count>',
+	help='exclude results with less than %(metavar)s duplicate files (implicit value: %(const)s)')
 parser_duplicates.set_defaults(func=duplicates)
 
 args = parser.parse_args()
