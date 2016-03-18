@@ -1,7 +1,7 @@
 # -*- coding: utf8 -*-
 
 import sys, codecs, textwrap
-from os.path import join
+from os.path import join, expanduser
 from time import time
 import argparse
 import tee, files_db, args_types
@@ -112,7 +112,7 @@ def find(db, args):
 		
 general_options_parser = argparse.ArgumentParser(add_help=False)
 general_options = general_options_parser.add_argument_group('general options')
-general_options.add_argument('-p', '--db-filepath', type=args_types.file_path, default='c:/files.db', metavar='<path>', help='files database file path')
+general_options.add_argument('-p', '--db-filepath', type=args_types.file_path, default='~/files_db_default_file.db', metavar='<path>', help='files database file path')
 general_options.add_argument('-d', '--drives', type=args_types.drives_letters, metavar='<drives>',
 	help='restrict action to some drives')
 general_options.add_argument('-x', '--exclude-drives', type=args_types.drives_letters, nargs='?', const='', default='C', metavar='<drives>',
@@ -193,8 +193,8 @@ if args.log_file:
 				)
 elif args.no_stdout: sys.stdout = fake_fd()
 
+if args.db_filepath and args.db_filepath[0] == '~': args.db_filepath = expanduser(args.db_filepath)
 db = files_db.FilesDb(exclude_drives=args.exclude_drives, db_filepath=args.db_filepath)
-#if args.drives is None: args.drives = db.drives()
 if args.drives and args.exclude_drives: args.drives = [drive for drive in args.drives if drive not in args.exclude_drives]
 _loaddb(db, args.quiet < 2)
 if args.updatedb and args.func != updatedb: updatedb(db, args)
