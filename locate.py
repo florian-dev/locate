@@ -172,8 +172,8 @@ filter_options = parser_duplicates.add_argument_group('filters', description=tex
 	filter  1 :  ignore results with more than three files and whose all
 	             filenames are same except for digits characters (0-9)
 	'''))
-filter_options.add_argument('-f', '--filter', action='append', choices=[1],
-	help='apply one filter among those listed above. this option can be mentioned several times')
+filter_options.add_argument('-f', '--filter', action='append', type=int, choices=[1],
+	help='apply one filter among those listed above ; this option can be mentioned several times')
 filter_options.add_argument('-t', '--file-size-threshold', type=args_types.file_size, nargs='?', const='2MB', default=0, metavar='<file_size>',
 	help='file size threshold (smaller ones are ignored) (implicit value: %(const)s)')
 filter_options.add_argument('-m', '--min-file-count', type=int, nargs='?', const=6, default=1, metavar='<count>',
