@@ -1,5 +1,5 @@
 # locate
-Locate files using a simple managed database. Can find a file name pattern and seek for duplicates files.
+Locate files using a simple managed database. Can find a file name pattern and seek for duplicates files. (Python 2.7 - Windows - unicode filenames support)
 
 Written for Windows. On Linux updatedb and locate commands do the job (except for duplicates seek), and I don't know MacOs.
 
