@@ -59,6 +59,7 @@ def drives_letters(drives_str):
 #	return letter
 
 def file_path(path):
+	if path and path[0] == '~': path = os.path.expanduser(path)
 	ok = True
 	if os.access(path, os.F_OK):
 		if not os.access(path, os.R_OK | os.W_OK):

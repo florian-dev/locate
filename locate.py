@@ -155,7 +155,7 @@ updatedb_options.add_argument('-h', '--help', action='help', help='show this hel
 updatedb_options.add_argument('-r', '--repport', action='store_true',
 	help='print database repport')
 updatedb_options.add_argument('-c', '--clean-drives', type=args_types.drives_letters, metavar='<drives>',
-	help='clean data for these drives before update')
+	help='clean data for these drives (before update)')
 parser_updatedb.set_defaults(func=updatedb)
 
 cmd = 'duplicates'
@@ -193,7 +193,6 @@ if args.log_file:
 				)
 elif args.no_stdout: sys.stdout = fake_fd()
 
-if args.db_filepath and args.db_filepath[0] == '~': args.db_filepath = expanduser(args.db_filepath)
 db = files_db.FilesDb(exclude_drives=args.exclude_drives, db_filepath=args.db_filepath)
 if args.drives and args.exclude_drives: args.drives = [drive for drive in args.drives if drive not in args.exclude_drives]
 _loaddb(db, args.quiet < 2)
