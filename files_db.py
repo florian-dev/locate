@@ -26,9 +26,6 @@ class FilesDb:
 		self._init_db()
 		self.size_not_found = []
 		
-	def _init_db(self):
-		self._db = dict()
-		
 	def _add_fake_file(self, drive, file=None, size=None):
 		""" add fake file in database for test purpose only
 		>>> FilesDb()._add_fake_file('A')._add_fake_file('A').len('A')
@@ -41,8 +38,17 @@ class FilesDb:
 			else: i = 1
 			file = 'file {}'.format(i)
 		if size is None: size = 0
-		files.append(( join(drive+':', 'dir'), file, size ))
+		files.append(( join(drive+':/', 'dir'), file, size ))
 		return self
+		
+	def _init_db(self):
+		"""
+		>>> db = FilesDb()._add_fake_file('A')._add_fake_file('A')
+		>>> db._init_db()
+		>>> db._db
+		{}
+		"""
+		self._db = dict()
 		
 	def __len__(self):
 		""" database file count
@@ -169,6 +175,22 @@ class FilesDb:
 		return [c for c in string.uppercase if c not in self.exclude_drives and os.path.isdir(c+':/')]
 
 	def _scan_drive_gen(self, drive):
+		r""" 
+		>>> import files_db_test as test
+		>>> drive, dir = test.make_drive()
+		>>> path = '0_Votre âme/est un/ paysage/choisi;1_Que vont/charmant masques/et bergamasques;2_Jouant du luth/et dansant/ et quasi;3_Tristes/sous leurs déguisements/ fantasques._'.decode('utf8')
+		>>> test.touch(path.split(';'), drive+':/')
+		>>> #
+		>>> db = FilesDb()
+		>>> for root, file, size in db._scan_drive_gen(drive):
+		... 	print root.replace('â'.decode('utf8'), 'A').replace('é'.decode('utf8'), 'E')[1:], file, size
+		:\0_Votre Ame\est un\ paysage choisi 0
+		:\1_Que vont\charmant masques et bergamasques 0
+		:\2_Jouant du luth\et dansant  et quasi 0
+		:\3_Tristes\sous leurs dEguisements  fantasques._ 0
+		>>> #
+		>>> test.del_drive(drive, dir)
+		"""
 		for root, dirs, files in os.walk(drive + u':\\'):
 			for file in files:
 				path = join(root, file)
@@ -180,6 +202,37 @@ class FilesDb:
 				yield (root, file, size)
 				
 	def update_drives_gen(self, drives):
+		r""" 
+		>>> import files_db_test as test
+		>>> drive1, dir1 = test.make_drive()
+		>>> path = '0_Votre âme/est un/ paysage/choisi;1_Que vont/charmant masques/et bergamasques;'.decode('utf8') \
+		... + '2_Jouant du luth/et dansant/ et quasi;3_Tristes/sous leurs déguisements/ fantasques._'.decode('utf8')
+		>>> test.touch(path.split(';'), drive1+':/')
+		>>> drive2, dir2 = test.make_drive()
+		>>> path = "0_Tout en chantant/sur le mode.mineur;1_L'amour/vainqueur/et la vie/opportune;" \
+		... + "2_Ils n'ont pas/l'air de croire/à leur bonheur;3_Et leur chanson/se mêle/au clair de lune,".decode('utf8')
+		>>> test.touch(path.split(';'), drive2+':/')
+		>>> #
+		>>> db = FilesDb()
+		>>> for root, file, size in db.update_drives_gen(drive1+drive2):
+		... 	print root.replace('â'.decode('utf8'), 'A1').replace('é'.decode('utf8'), 'E1').replace('ê'.decode('utf8'), 'E2')[1:],
+		... 	print '-', file.replace('à'.decode('utf8'), 'A2'), size
+		:\0_Votre A1me\est un\ paysage - choisi 0
+		:\1_Que vont\charmant masques - et bergamasques 0
+		:\2_Jouant du luth\et dansant -  et quasi 0
+		:\3_Tristes\sous leurs dE1guisements -  fantasques._ 0
+		:\0_Tout en chantant - sur le mode.mineur 0
+		:\1_L'amour\vainqueur\et la vie - opportune 0
+		:\2_Ils n'ont pas\l'air de croire - A2 leur bonheur 0
+		:\3_Et leur chanson\se mE2le - au clair de lune, 0
+		>>> db.drives() == [drive2, drive1]
+		True
+		>>> db.len(drive1)
+		4
+		>>> #
+		>>> test.del_drive(drive1, dir1)
+		>>> test.del_drive(drive2, dir2)
+		"""
 		for drive in drives:
 			first = True
 			for file in self._scan_drive_gen(drive):
@@ -190,24 +243,91 @@ class FilesDb:
 				yield file
 			
 	def update_drives(self, drives):
+		r""" 
+		>>> import files_db_test as test
+		>>> drive1, dir1 = test.make_drive()
+		>>> path = '0_Votre âme/est un/ paysage/choisi;1_Que vont/charmant masques/et bergamasques;'.decode('utf8') \
+		... + '2_Jouant du luth/et dansant/ et quasi;3_Tristes/sous leurs déguisements/ fantasques._'.decode('utf8')
+		>>> test.touch(path.split(';'), drive1+':/')
+		>>> drive2, dir2 = test.make_drive()
+		>>> path = "0_Tout en chantant/sur le mode.mineur;1_L'amour/vainqueur/et la vie/opportune;" \
+		... + "2_Ils n'ont pas/l'air de croire/à leur bonheur;3_Et leur chanson/se mêle/au clair de lune,".decode('utf8')
+		>>> test.touch(path.split(';'), drive2+':/')
+		>>> with open(os.path.join(drive1+':/', 'titre.txt'), 'w') as file:
+		... 	file.write('Clair de lune')
+		>>> #
+		>>> db = FilesDb()
+		>>> db.update_drives(drive1+drive2)
+		9
+		>>> db.drives() == [drive2, drive1]
+		True
+		>>> db.size(drive1) > 0
+		True
+		>>> #
+		>>> test.del_drive(drive1, dir1)
+		>>> test.del_drive(drive2, dir2)
+		"""
 		self.size_not_found = []
 		c = 0
 		for file in self.update_drives_gen(drives): c += 1
 		return c
 
 	def update_gen(self):
+		"""
+		>>> db = FilesDb(exclude_drives='')
+		>>> db.exclude_drives = db._get_drives()
+		>>> [x for x in db.update_gen()]
+		[]
+		"""
 		self.size_not_found = []
 		drives = self._get_drives()
 		for file in self.update_drives_gen(drives):
 			yield file
 			
 	def update(self):
+		"""
+		>>> db = FilesDb(exclude_drives='')
+		>>> db.exclude_drives = db._get_drives()
+		>>> db.update()
+		0
+		"""
 		c = 0
 		for file in self.update_gen(): c += 1
 		return c
 		
 	# input : can contain '*' to enlarge search
 	def find(self, input, ignore_case=False): # -> [ ( root, file, size ), ... ]
+		r""" 
+		>>> import files_db_test as test
+		>>> drive1, dir1 = test.make_drive()
+		>>> path = '0_Votre âme/est un/ paysage/choisi;1_Que vont/charmant masques/et bergamasques;'.decode('utf8') \
+		... + '2_Jouant du luth/et dansant/ et quasi;3_Tristes/sous leurs déguisements/ fantasques._'.decode('utf8')
+		>>> test.touch(path.split(';'), drive1+':/')
+		>>> drive2, dir2 = test.make_drive()
+		>>> path = "0_Tout en chantant/sur le mode.mineur;1_L'amour/vainqueur/et la vie/opportune;" \
+		... + "2_Ils n'ont pas/l'air de croire/à leur bonheur;3_Et leur chanson/se mêle/au clair de lune,".decode('utf8')
+		>>> test.touch(path.split(';'), drive2+':/')
+		>>> #
+		>>> db = FilesDb()
+		>>> db.update_drives(drive1+drive2)
+		8
+		>>> for root, file, size in db.find('*._'):
+		... 	print file
+		 fantasques._
+		>>> for root, file, size in sorted(db.find(' *')):
+		... 	print file
+		 et quasi
+		 fantasques._
+		>>> for root, file, size in sorted(db.find('*de*')):
+		... 	print file
+		sur le mode.mineur
+		au clair de lune,
+		>>> len(db.find('*'))
+		8
+		>>> #
+		>>> test.del_drive(drive1, dir1)
+		>>> test.del_drive(drive2, dir2)
+		"""
 		if not input: return []
 		if ignore_case: elmts = input.lower().split('*')
 		else: elmts = input.split('*')
@@ -243,5 +363,5 @@ class FilesDb:
 		return matches
 
 if __name__ == "__main__":
-    import doctest
-    doctest.testmod(verbose=True)
+    import doctest, sys
+    doctest.testmod(verbose='-v' in sys.argv)
