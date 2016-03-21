@@ -1,3 +1,4 @@
+# -*- coding: utf8 -*-
 import string, subprocess, os, tempfile, random, time
 from ctypes import windll
 
@@ -76,3 +77,41 @@ def touch(files, prefix='./'):
 			os.makedirs(dir)
 		with open(path, 'a') as f:
 			pass
+			
+def files_db_context_build(db):
+	drive1, dir1 = make_drive()
+	path = '0_Votre âme/est un/ paysage/choisi;1_Que vont/charmant masques/et bergamasques;'.decode('utf8') + \
+		'2_Jouant du luth/et dansant/ et quasi;3_Tristes/sous leurs déguisements/ fantasques._'.decode('utf8')
+	touch(path.split(';'), drive1+':/')
+	drive2, dir2 = make_drive()
+	path = "0_Tout en chantant/sur le mode.mineur;1_L'amour/vainqueur/et la vie/opportune;" + \
+		"2_Ils n'ont pas/l'air de croire/à leur bonheur;3_Et leur chanson/se mêle/au clair de lune,".decode('utf8')
+	touch(path.split(';'), drive2+':/')
+	with open(os.path.join(drive1+':/', 'titre.txt'), 'w') as file:
+		file.write('Clair de lune')
+	ex = [c for c in string.uppercase if c not in drive1+drive2]
+	db.exclude_drives = ex
+	c = db.update_drives(drive1+drive2)
+	if c == 0:
+		raise Exception('test preparation failed !')
+	return drive1, drive2, db, dir1+';'+dir2
+
+def duplicates_context_build(db):
+	paths = [	"0_Au calme/clair de lune/triste/et/beau,/blank.w;1_Qui fait/rEver les oiseaux/dans les/arbres/blank.w",
+				"2_Et/sangloter/d'extase les/jets/d'eau,/Blank.w;3_Les grands jets/d'eau sveltes/parmi les marbres/Blank.w" ]
+	drives, dirs = '', []
+	for path in paths:
+		drive, dir = make_drive()
+		drives += drive
+		dirs.append(dir)
+		touch(path.split(';'), drive+':/')
+	ex = [c for c in string.uppercase if c not in drives]
+	db.exclude_drives = ex
+	c = db.update_drives(drives)
+	if c == 0:
+		raise Exception('test preparation failed !')
+	return drives, db, ';'.join(dirs)
+
+def context_del(drives, sav):
+	for drive, dir in zip(drives, sav.split(';')):
+		del_drive(drive, dir)

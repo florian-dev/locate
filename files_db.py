@@ -336,31 +336,12 @@ class FilesDb:
 		return matches
 
 if __name__ == "__main__":
-	import doctest, sys, tempfile
+	import doctest, tempfile
 	import files_db_test as test
-	drive1, dir1 = test.make_drive()
-	path = '0_Votre âme/est un/ paysage/choisi;1_Que vont/charmant masques/et bergamasques;'.decode('utf8') + \
-		'2_Jouant du luth/et dansant/ et quasi;3_Tristes/sous leurs déguisements/ fantasques._'.decode('utf8')
-	test.touch(path.split(';'), drive1+':/')
-	drive2, dir2 = test.make_drive()
-	path = "0_Tout en chantant/sur le mode.mineur;1_L'amour/vainqueur/et la vie/opportune;" + \
-		"2_Ils n'ont pas/l'air de croire/à leur bonheur;3_Et leur chanson/se mêle/au clair de lune,".decode('utf8')
-	test.touch(path.split(';'), drive2+':/')
-	with open(os.path.join(drive1+':/', 'titre.txt'), 'w') as file:
-		file.write('Clair de lune')
-		
-	ex = [c for c in string.uppercase if c not in drive1+drive2]
-	updated_db = FilesDb(exclude_drives=ex)
-	c = updated_db.update_drives(drive1+drive2)
-	if c == 0:
-		raise Exception('test preparation failed !')
-
+	drive1, drive2, updated_db, sav = test.files_db_context_build(FilesDb())
 	doctest.testmod(
 		name='files_db',
 		extraglobs=dict(drive1=drive1, drive2=drive2, testdb=updated_db),
 		optionflags=doctest.REPORT_ONLY_FIRST_FAILURE # | doctest.REPORT_UDIFF
 		)
-	
-	test.del_drive(drive1, dir1)
-	test.del_drive(drive2, dir2)
-	
+	test.context_del((drive1,drive2), sav)
