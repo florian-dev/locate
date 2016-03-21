@@ -1,69 +1,95 @@
 # -*- coding: utf8 -*-
 
 from common import hr_size
+import itertools
 
 def _files_gen(db, drives, exclude_drives):
 	if drives is None: drives = db.drives()
 	if exclude_drives: drives = [drive for drive in drives if drive not in exclude_drives]
-	for drive in drives:
-		for file in db.files(drive):
-			yield file
+	return itertools.chain.from_iterable(itertools.imap(db.files, drives))
+	#for drive in drives:
+	#	for file in db.files(drive):
+	#		yield file
 
-def duplicates(db, args):
+def duplicates(db, args, ignore_case=True):
+	r"""
+	>>> args_d = dict(quiet = 2, drives = testdb.drives(), exclude_drives = None, file_size_threshold = 0,
+	... 	min_file_count = 1, filter = None, sort_criteria = 'file', view_max_file_count = -1)
+	>>> args = argparse.Namespace(**args_d)
+	>>> duplicates(testdb, args)
+	Y:\2_Et\sangloter\d'extase les\jets\d'eau,
+	Y:\3_Les grands jets\d'eau sveltes\parmi les marbres
+	Z:\0_Au calme\clair de lune\triste\et\beau,
+	Z:\1_Qui fait\rEver les oiseaux\dans les\arbres
+	1 fichiers en commun :
+	<BLANKLINE>
+	  blank.w
+	<BLANKLINE>
+	"""
+	all_files = _files_gen(db, args.drives, args.exclude_drives)
 	verbose = args.quiet < 2
-	all_files = sorted(_files_gen(db, args.drives, args.exclude_drives), key=lambda item: item[1])
-	c_all = len(all_files)
 		
+	# file_size_threshold
 	seuil = args.file_size_threshold
-	files_by_name = []
-	while all_files:
-		root, file, size = all_files.pop()
-		if seuil and size < seuil: continue
-		if files_by_name and file.lower() == files_by_name[-1][0].lower():
-			files_by_name[-1][1].append((root, size))
-		else:
-			files_by_name.append(( file, [ (root, size) ] ))
-
-	if verbose and seuil: print 'Files smaller than', hr_size(seuil), 'are ignored.'
-	if verbose: print 'Count of filenames :', len(files_by_name)
-
+	if seuil > 0:
+		func = lambda (root, file, size): size >= seuil
+		all_files = itertools.ifilter(func, all_files)
+		if verbose: print 'Files smaller than', hr_size(seuil), 'are ignored.'
+	
+	# group by filename
+	group_key = lambda (root, file, size): file
+	
+	if ignore_case:
+		# ignore case
+		key = group_key
+		group_key = lambda file: key(file).lower()
+	
+	all_files = sorted(all_files, key=group_key)
+	c_all = len(all_files)
+	
 	doublons = []
-	while files_by_name:
-		file, r_s = files_by_name.pop()
+	filenames_count = 0
+	duplicates_filenames_count = 0
+	for k, g in itertools.groupby(all_files, group_key):
+		filenames_count += 1
+		r_s = map(lambda (root, file, size): (root, size), g)
 		if len(r_s) > 1:
-			r_s.sort(key=lambda item: item[0], reverse=True)
-			roots, sizes = [], []
-			while r_s:
-				root, size = r_s.pop()
-				roots.append(root)
-				sizes.append(size)
-			doublons.append((file, roots, sizes))
-
-	if not doublons:
+			duplicates_filenames_count += 1
+			doublon = tuple([k] + zip(*r_s))
+			doublons.append(doublon)
+	del all_files
+		
+	if verbose:
+		print 'Count of filenames :', filenames_count
+		if filenames_count:
+			print 'Noms de fichiers non uniques :', duplicates_filenames_count
+	
+	if duplicates_filenames_count == 0:
 		if verbose: print 'Aucun doublon trouve.'
 	else:
-		doublons.sort(key=lambda item:item[1])
-		if verbose: print 'Noms de fichiers non uniques :', len(doublons)
-
-		doublons_par_reps = []
-		while doublons:
-			file, roots, sizes = doublons.pop()
-			if doublons_par_reps and roots == doublons_par_reps[-1][0]:
-				doublons_par_reps[-1][1].append(file)
-			else:
-				doublons_par_reps.append(( roots, [ file ] ))
-		if verbose: print u'Tuples de répertoires contenant des fichiers de même nom :', len(doublons_par_reps)
 		
+		# min_file_count
 		seuil = args.min_file_count
-		if seuil > 1:
-			doublons_par_reps2 = []
-			while doublons_par_reps:
-				doublon = doublons_par_reps.pop()
-				if len(doublon[1]) >= seuil:
-					doublons_par_reps2.append(doublon)
-			doublons_par_reps = doublons_par_reps2
-			if verbose: print u'Tuples de répertoires contenant plus de', seuil, u'fichiers de même nom :', len(doublons_par_reps)
-			
+		
+		# group by roots
+		group_key = lambda (file, roots, sizes): roots
+		doublons.sort(key=group_key)
+		doublons_par_reps = []
+		directory_tuples_count = 0
+		final_directory_tuples_count = 0
+		for k, g in itertools.groupby(doublons, group_key):
+			directory_tuples_count += 1
+			files = map(lambda (file, roots, sizes): file, g)
+			if seuil < 2 or len(files) >= seuil:
+				final_directory_tuples_count += 1
+				doublons_par_reps.append((k, files))
+		del doublons
+		
+		if verbose:
+			print u'Tuples de répertoires contenant des fichiers de même nom :', directory_tuples_count
+			if seuil >= 2:
+				print u'Tuples de répertoires contenant plus de', seuil, u'fichiers de même nom :', final_directory_tuples_count
+		
 		# filtre 1 : enlève les résultats contenant plus de trois fichiers et dont les noms de fichiers (tous)
 		#            sont identiques à l'exception des éventuels caractères numériques (0-9)
 		if args.filter and 1 in args.filter:
@@ -131,3 +157,14 @@ def duplicates(db, args):
 			else: print '.'
 			print
 			
+if __name__ == '__main__':
+	import doctest, argparse
+	from files_db import FilesDb
+	import files_db_test as test
+	drives, updated_db, sav = test.duplicates_context_build(FilesDb())
+	doctest.testmod(
+		name='duplicates',
+		extraglobs=dict(drive1=drives[0], drive2=drives[1], testdb=updated_db),
+		optionflags=doctest.REPORT_ONLY_FIRST_FAILURE
+		)
+	test.context_del(drives, sav)
