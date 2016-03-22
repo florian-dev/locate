@@ -5,7 +5,7 @@ from ctypes import windll
 def _logical_drives():
 	drives = []
 	bitmask = windll.kernel32.GetLogicalDrives()
-	for letter in string.uppercase:
+	for letter in string.ascii_uppercase:
 		if bitmask & 1:
 			drives.append(letter)
 		bitmask >>= 1
@@ -13,7 +13,7 @@ def _logical_drives():
 
 def _free_drive():
 	drives = _logical_drives()
-	for letter in sorted(string.uppercase, reverse=True):
+	for letter in sorted(string.ascii_uppercase, reverse=True):
 		if letter not in drives: return letter
 	return None
 
@@ -89,7 +89,7 @@ def files_db_context_build(db):
 	touch(path.split(';'), drive2+':/')
 	with open(os.path.join(drive1+':/', 'titre.txt'), 'w') as file:
 		file.write('Clair de lune')
-	ex = [c for c in string.uppercase if c not in drive1+drive2]
+	ex = [c for c in string.ascii_uppercase if c not in drive1+drive2]
 	db.exclude_drives = ex
 	c = db.update_drives(drive1+drive2)
 	if c == 0:
@@ -105,7 +105,7 @@ def duplicates_context_build(db):
 		drives += drive
 		dirs.append(dir)
 		touch(path.split(';'), drive+':/')
-	ex = [c for c in string.uppercase if c not in drives]
+	ex = [c for c in string.ascii_uppercase if c not in drives]
 	db.exclude_drives = ex
 	c = db.update_drives(drives)
 	if c == 0:
