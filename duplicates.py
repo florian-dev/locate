@@ -12,14 +12,30 @@ def _files_gen(db, drives, exclude_drives):
 	#	for file in db.files(drive):
 	#		yield file
 
-def duplicates(db, args, ignore_case=True):
+def duplicates(db, args, ignore_case=True, check_exact_filesize=False):
 	r"""
 	>>> args_d = dict(quiet = 2, drives = testdb.drives(), exclude_drives = None, file_size_threshold = 0,
-	... 	min_file_count = 1, filter = [1], sort_criteria = 'file', view_max_file_count = -1)
+	... 	min_file_count = 1, filter = [1], sort_criteria = 'file', view_max_file_count = -1,
+	... 	ignore_case=True, check_exact_filesize=False )
 	>>> args = argparse.Namespace(**args_d)
 	>>> duplicates(testdb, args)
 	Y:\2_Et\sangloter\d'extase les\jets\d'eau,
 	Y:\3_Les grands jets\d'eau sveltes\parmi les marbres
+	Z:\0_Au calme\clair de lune\triste\et\beau,
+	Z:\1_Qui fait\rEver les oiseaux\dans les\arbres
+	1 fichiers en commun :
+	<BLANKLINE>
+	  blank.w
+	<BLANKLINE>
+	>>> args.ignore_case = False
+	>>> args.check_exact_filesize = True
+	>>> duplicates(testdb, args)
+	Y:\2_Et\sangloter\d'extase les\jets\d'eau,
+	Y:\3_Les grands jets\d'eau sveltes\parmi les marbres
+	1 fichiers en commun :
+	<BLANKLINE>
+	  Blank.w
+	<BLANKLINE>
 	Z:\0_Au calme\clair de lune\triste\et\beau,
 	Z:\1_Qui fait\rEver les oiseaux\dans les\arbres
 	1 fichiers en commun :
@@ -37,13 +53,15 @@ def duplicates(db, args, ignore_case=True):
 		all_files = itertools.ifilter(func, all_files)
 		if verbose: print 'Files smaller than', hr_size(seuil), 'are ignored.'
 	
-	# group by filename
-	group_key = lambda (root, file, size): file
+	# ignore case
+	if args.ignore_case: ignore_case_func = lambda (root, file, size): (root, file.lower(), size)
+	else: ignore_case_func = lambda i:i
 	
-	if ignore_case:
-		# ignore case
-		key = group_key
-		group_key = lambda file: key(file).lower()
+	# use filesize
+	if args.check_exact_filesize: select_func = lambda (root, file, size): (file, size)
+	else: select_func = lambda (root, file, size): (file,)
+	
+	group_key = lambda file: select_func(ignore_case_func(file))
 	
 	all_files = sorted(all_files, key=group_key)
 	c_all = len(all_files)
@@ -53,10 +71,12 @@ def duplicates(db, args, ignore_case=True):
 	duplicates_filenames_count = 0
 	for k, g in itertools.groupby(all_files, group_key):
 		filenames_count += 1
-		r_s = map(lambda (root, file, size): (root, size), g)
+		files = list(g)
+		filename = files[0][1]
+		r_s = map(lambda (root, file, size): (root, size), files)
 		if len(r_s) > 1:
 			duplicates_filenames_count += 1
-			doublon = tuple([k] + zip(*r_s))
+			doublon = tuple([k[0]] + zip(*r_s))
 			doublons.append(doublon)
 	del all_files
 		

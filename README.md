@@ -3,10 +3,6 @@ Locate files using a simple managed database. Can find a file name pattern and s
 
 Written for Windows. On Linux updatedb and locate commands do the job (except for duplicates seek), and I don't know MacOs.
 
-TODO :
-- [x] add --clean-drives option to updatedb action
-- [ ] using filters for find action (ex: file-size-threshold)
-
 ###### locate.py -h :
 ```
 usage: locate.py [-h] {find,updatedb,duplicates} ...
@@ -35,7 +31,8 @@ positional arguments:
 
 general options:
   -p <path>, --db-filepath <path>
-                        files database file path (default: c:/files.db)
+                        files database file path (default:
+                        ~/files_db_default_file.db)
   -d <drives>, --drives <drives>
                         restrict action to some drives (default: None)
   -x [<drives>], --exclude-drives [<drives>]
@@ -47,12 +44,12 @@ general options:
                         use <log_file> as main output with utf8 encoding and
                         convert stdout to 'replace' mode if --no-stdout is not
                         present (default: None)
+  -i, --ignore-case     useless with updatedb command (default: False)
   -n, --no-stdout
   -q, --quiet
 
 find options:
   -h, --help            show this help message and exit
-  -i, --ignore-case
   -t <file_size>, --file-size-threshold <file_size>
                         file size threshold (smaller ones are ignored)
                         (default: 0)
@@ -69,7 +66,8 @@ update database
 
 general options:
   -p <path>, --db-filepath <path>
-                        files database file path (default: c:/files.db)
+                        files database file path (default:
+                        ~/files_db_default_file.db)
   -d <drives>, --drives <drives>
                         restrict action to some drives (default: None)
   -x [<drives>], --exclude-drives [<drives>]
@@ -81,6 +79,7 @@ general options:
                         use <log_file> as main output with utf8 encoding and
                         convert stdout to 'replace' mode if --no-stdout is not
                         present (default: None)
+  -i, --ignore-case     useless with updatedb command (default: False)
   -n, --no-stdout
   -q, --quiet
 
@@ -88,7 +87,7 @@ updatedb options:
   -h, --help            show this help message and exit
   -r, --repport         print database repport (default: False)
   -c <drives>, --clean-drives <drives>
-                        clean data for these drives before update (default:
+                        clean data for these drives (before update) (default:
                         None)
 
 <drives>    : (<letter>[:])+        Example: 'dE:h:Gp'
@@ -102,7 +101,8 @@ find duplicate files in database
 
 general options:
   -p <path>, --db-filepath <path>
-                        files database file path (default: c:/files.db)
+                        files database file path (default:
+                        ~/files_db_default_file.db)
   -d <drives>, --drives <drives>
                         restrict action to some drives (default: None)
   -x [<drives>], --exclude-drives [<drives>]
@@ -114,11 +114,14 @@ general options:
                         use <log_file> as main output with utf8 encoding and
                         convert stdout to 'replace' mode if --no-stdout is not
                         present (default: None)
+  -i, --ignore-case     useless with updatedb command (default: False)
   -n, --no-stdout
   -q, --quiet
 
 duplicates options:
   -h, --help            show this help message and exit
+  -e, --check-exact-filesize
+                        check filename and filesize (default: False)
   -s {file,directory}, --sort-criteria {file,directory}
                         sort criteria : 'file' (default) = by decreasing file
                         count ; 'directory' = by decreasing directories count,
@@ -130,9 +133,12 @@ duplicates options:
 filters:
   filter  1 :  ignore results with more than three files and whose all
                filenames are same except for digits characters (0-9)
+  filter  2 :  ignore results with more than one file and whose all
+               filenames are same except for digits characters (0-9)
 
-  -f {1}, --filter {1}  apply one filter among those listed above. this option
-                        can be mentioned several times (default: None)
+  -f {1,2}, --filter {1,2}
+                        apply one filter among those listed above ; this
+                        option can be mentioned several times (default: None)
   -t [<file_size>], --file-size-threshold [<file_size>]
                         file size threshold (smaller ones are ignored)
                         (implicit value: 2MB) (default: 0)

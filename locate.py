@@ -121,6 +121,7 @@ general_options.add_argument('-u', '--updatedb', action='store_true',
 	help='update files database before processing')
 general_options.add_argument('-l', '--log-file', type=args_types.opened_log_file, metavar='<log_file>',
 	help="use %(metavar)s as main output with utf8 encoding and convert stdout to 'replace' mode if --no-stdout is not present")
+general_options.add_argument('-i', '--ignore-case', action='store_true', help='useless with updatedb command')
 general_options.add_argument('-n', '--no-stdout', action='store_true')
 general_options.add_argument('-q', '--quiet', action='count', default=0)
 
@@ -141,7 +142,6 @@ parser_find = subparsers.add_parser(cmd, usage='%(prog)s [options] pattern', par
 parser_find.add_argument('pattern', help="filname pattern to search for ; pattern can contain '*' to widen results")
 find_options = parser_find.add_argument_group('find options')
 find_options.add_argument('-h', '--help', action='help', help='show this help message and exit')
-find_options.add_argument('-i', '--ignore-case', action='store_true')
 find_options.add_argument('-t', '--file-size-threshold', type=args_types.file_size, default=0, metavar='<file_size>',
 	help='file size threshold (smaller ones are ignored)')
 parser_find.set_defaults(func=find)
@@ -164,6 +164,7 @@ parser_duplicates = subparsers.add_parser(cmd, usage='%(prog)s [options]', paren
 	help=description_strings[cmd], description=description_strings[cmd])
 duplicates_options = parser_duplicates.add_argument_group('duplicates options')
 duplicates_options.add_argument('-h', '--help', action='help', help='show this help message and exit')
+duplicates_options.add_argument('-e', '--check-exact-filesize', action='store_true', help='check filename and filesize')
 duplicates_options.add_argument('-s', '--sort-criteria', choices=['file','directory'], default='file',
 	help="sort criteria : 'file' (default) = by decreasing file count ; 'directory' = by decreasing directories count, then by directories names")
 duplicates_options.add_argument('-v', '--view-max-file-count', type=int, nargs='?', const=15, default=-1, metavar='<count>',
