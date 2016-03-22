@@ -197,7 +197,7 @@ class FilesDb:
 		>>> db._get_drives()
 		[]
 		"""
-		return [c for c in string.uppercase if c not in self.exclude_drives and os.path.isdir(c+':/')]
+		return [c for c in string.ascii_uppercase if c not in self.exclude_drives and os.path.isdir(c+':/')]
 
 	def _scan_drive_gen(self, drive):
 		r""" 
