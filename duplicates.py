@@ -91,24 +91,36 @@ def duplicates(db, args, ignore_case=True):
 		if seuil >= 2:
 			print u'Tuples de répertoires contenant plus de', seuil, u'fichiers de même nom :', final_directory_tuples_count
 	
-	# filtre 1 : enlève les résultats contenant plus de trois fichiers et dont les noms de fichiers (tous)
-	#            sont identiques à l'exception des éventuels caractères numériques (0-9)
-	if args.filter and 1 in args.filter:
+	# filters
+	if args.filter:
 		def remove_digits(str):
 			grey_str = str
 			for digit in string.digits:
 				if digit in grey_str:
 					grey_str = grey_str.replace(digit, '')
 			return grey_str
-		def filter_key(doublon):
+		def filter_nmax_files(n):
+			return lambda (roots, files): len(files) <= n
+		def filter_key2(doublon):
 			roots, files = doublon
-			if len(files) <= 3: return True
 			c = len(Counter(itertools.imap(remove_digits, files)))
 			return c != 1
-			
-		if verbose: print 'Application du filtre 1 ...',
-		doublons_par_reps = filter(filter_key, doublons_par_reps)
-		if verbose: print 'tuples restants :', len(doublons_par_reps)
+		
+		# filtre 1 : enlève les résultats contenant plus de trois fichiers et dont les noms de fichiers (tous)
+		#            sont identiques à l'exception des éventuels caractères numériques (0-9)
+		if 1 in args.filter and 2 not in args.filter:
+			filter_key = lambda doublon: filter_nmax_files(3)(doublon) or filter_key2(doublon)
+			if verbose: print 'Application du filtre 1 ...',
+			doublons_par_reps = filter(filter_key, doublons_par_reps)
+			if verbose: print 'tuples restants :', len(doublons_par_reps)
+		
+		# filtre 2 : enlève les résultats dont les noms de fichiers sont identiques
+		#            à l'exception des éventuels caractères numériques (0-9)
+		if 2 in args.filter:
+			filter_key = lambda doublon: filter_nmax_files(1)(doublon) or filter_key2(doublon)
+			if verbose: print 'Application du filtre 1 ...',
+			doublons_par_reps = filter(filter_key, doublons_par_reps)
+			if verbose: print 'tuples restants :', len(doublons_par_reps)
 		
 	if args.sort_criteria == 'directory':
 		# tri par nombre de repertoires concernes (decroissant) puis alphabetique par répertoires

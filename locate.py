@@ -171,8 +171,10 @@ duplicates_options.add_argument('-v', '--view-max-file-count', type=int, nargs='
 filter_options = parser_duplicates.add_argument_group('filters', description=textwrap.dedent('''\
 	filter  1 :  ignore results with more than three files and whose all
 	             filenames are same except for digits characters (0-9)
+	filter  2 :  ignore results with more than one file and whose all
+	             filenames are same except for digits characters (0-9)
 	'''))
-filter_options.add_argument('-f', '--filter', action='append', type=int, choices=[1],
+filter_options.add_argument('-f', '--filter', action='append', type=int, choices=[1,2],
 	help='apply one filter among those listed above ; this option can be mentioned several times')
 filter_options.add_argument('-t', '--file-size-threshold', type=args_types.file_size, nargs='?', const='2MB', default=0, metavar='<file_size>',
 	help='file size threshold (smaller ones are ignored) (implicit value: %(const)s)')
