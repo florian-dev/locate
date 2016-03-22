@@ -1,7 +1,8 @@
 # -*- coding: utf8 -*-
 
 from common import hr_size
-import itertools
+import itertools, string
+from collections import Counter
 
 def _files_gen(db, drives, exclude_drives):
 	if drives is None: drives = db.drives()
@@ -14,7 +15,7 @@ def _files_gen(db, drives, exclude_drives):
 def duplicates(db, args, ignore_case=True):
 	r"""
 	>>> args_d = dict(quiet = 2, drives = testdb.drives(), exclude_drives = None, file_size_threshold = 0,
-	... 	min_file_count = 1, filter = None, sort_criteria = 'file', view_max_file_count = -1)
+	... 	min_file_count = 1, filter = [1], sort_criteria = 'file', view_max_file_count = -1)
 	>>> args = argparse.Namespace(**args_d)
 	>>> duplicates(testdb, args)
 	Y:\2_Et\sangloter\d'extase les\jets\d'eau,
@@ -93,51 +94,32 @@ def duplicates(db, args, ignore_case=True):
 	# filtre 1 : enlève les résultats contenant plus de trois fichiers et dont les noms de fichiers (tous)
 	#            sont identiques à l'exception des éventuels caractères numériques (0-9)
 	if args.filter and 1 in args.filter:
-		def grey_digits(string):
-			grey_str = string
+		def remove_digits(str):
+			grey_str = str
 			for digit in string.digits:
 				if digit in grey_str:
-					grey_str = grey_str.replace(digit, '*')
+					grey_str = grey_str.replace(digit, '')
 			return grey_str
+		def filter_key(doublon):
+			roots, files = doublon
+			if len(files) <= 3: return True
+			c = len(Counter(itertools.imap(remove_digits, files)))
+			return c != 1
+			
 		if verbose: print 'Application du filtre 1 ...',
-		doublons_par_reps2 = []
-		while doublons_par_reps:
-			doublon = doublons_par_reps.pop()
-			if len(doublon[1]) > 3:
-				str_cmp = grey_digits(doublon[1][0])
-				exclude = True
-				for i in xrange(1, len(doublon[1])):
-					if grey_digits(doublon[1][i]) != str_cmp:
-						exclude = False
-						break
-				if exclude: continue
-			doublons_par_reps2.append(doublon)
-		doublons_par_reps = doublons_par_reps2
+		doublons_par_reps = filter(filter_key, doublons_par_reps)
 		if verbose: print 'tuples restants :', len(doublons_par_reps)
 		
-	if verbose: print
-
 	if args.sort_criteria == 'directory':
 		# tri par nombre de repertoires concernes (decroissant) puis alphabetique par répertoires
 		# (-len(t), '*'.join([s[0] for s in t] + t))
-		doublons_par_reps2 = []
-		while doublons_par_reps:
-			doublon = doublons_par_reps.pop()
-			roots = doublon[0]
-			cmp_str = ''
-			c = max([len(s) for s in roots])
-			for i in xrange(c):
-				for root in roots:
-					if i < len(root):
-						cmp_str += root[i]
-			cmp_tuple = -len(roots), cmp_str
-			doublons_par_reps2.append((doublon, cmp_tuple))
-		doublons_par_reps2.sort(key=lambda item: item[1], reverse=True)
-		while doublons_par_reps2:
-			doublons_par_reps.append(doublons_par_reps2.pop()[0])
+		sort_key = lambda (roots, files): (-len(roots), map(''.join, itertools.izip_longest(*roots, fillvalue='')))
+		doublons_par_reps.sort(key=sort_key)
 	elif args.sort_criteria == 'file':
 		# tri par nombre de resultats decroissant
 		doublons_par_reps.sort(key=lambda item:(-len(item[1]), item[0]))
+
+	if verbose: print
 
 	for doublon in doublons_par_reps:
 		for root in doublon[0]:
