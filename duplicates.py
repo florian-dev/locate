@@ -121,16 +121,16 @@ def duplicates(db, args, ignore_case=True):
 
 	if verbose: print
 
-	for doublon in doublons_par_reps:
-		for root in doublon[0]:
+	for roots, files in doublons_par_reps:
+		for root in roots:
 			print root
-		print len(doublon[1]), 'fichiers en commun',
+		print len(files), 'fichiers en commun',
 		if args.view_max_file_count != 0:
 			print ':'
 			print
-			doublon[1].sort()
+			files.sort()
 			i = 0
-			for file in doublon[1]:
+			for file in files:
 				if i == args.view_max_file_count:
 					print '  ...'
 					break
