@@ -122,6 +122,8 @@ duplicates options:
   -h, --help            show this help message and exit
   -e, --check-exact-filesize
                         check filename and filesize (default: False)
+  -a, --check-approximative-filesize
+                        check filename and filesize (default: False)
   -s {file,directory}, --sort-criteria {file,directory}
                         sort criteria : 'file' (default) = by decreasing file
                         count ; 'directory' = by decreasing directories count,
@@ -136,7 +138,7 @@ filters:
   filter  2 :  ignore results with more than one file and whose all
                filenames are same except for digits characters (0-9)
 
-  -f {1,2}, --filter {1,2}
+  -f {1,2,3}, --filter {1,2,3}
                         apply one filter among those listed above ; this
                         option can be mentioned several times (default: None)
   -t [<file_size>], --file-size-threshold [<file_size>]
