@@ -50,6 +50,7 @@ general options:
 
 find options:
   -h, --help            show this help message and exit
+  -w, --wide            transform 'pattern' to '*pattern*' (default: False)
   -t <file_size>, --file-size-threshold <file_size>
                         file size threshold (smaller ones are ignored)
                         (default: 0)

@@ -142,6 +142,7 @@ parser_find = subparsers.add_parser(cmd, usage='%(prog)s [options] pattern', par
 parser_find.add_argument('pattern', help="filname pattern to search for ; pattern can contain '*' to widen results")
 find_options = parser_find.add_argument_group('find options')
 find_options.add_argument('-h', '--help', action='help', help='show this help message and exit')
+find_options.add_argument('-w', '--wide', action='store_true', help="transform 'pattern' to '*pattern*'")
 find_options.add_argument('-t', '--file-size-threshold', type=args_types.file_size, default=0, metavar='<file_size>',
 	help='file size threshold (smaller ones are ignored)')
 parser_find.set_defaults(func=find)
@@ -186,6 +187,10 @@ filter_options.add_argument('-m', '--min-file-count', type=int, nargs='?', const
 parser_duplicates.set_defaults(func=duplicates)
 
 args = parser.parse_args()
+
+# find.wide option
+if args.func == find and args.wide:
+	args.pattern = '*' + args.pattern + '*'
 
 # log option
 if args.log_file:
