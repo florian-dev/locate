@@ -16,7 +16,7 @@ def duplicates(db, args, ignore_case=True, check_exact_filesize=False):
 	r"""
 	>>> args_d = dict(quiet = 2, drives = testdb.drives(), exclude_drives = None, file_size_threshold = 0,
 	... 	min_file_count = 1, filter = [1], sort_criteria = 'file', view_max_file_count = -1,
-	... 	ignore_case=True, check_exact_filesize=False )
+	... 	ignore_case=True, check_exact_filesize=False, check_approximative_filesize=False )
 	>>> args = argparse.Namespace(**args_d)
 	>>> duplicates(testdb, args)
 	Y:\2_Et\sangloter\d'extase les\jets\d'eau,
