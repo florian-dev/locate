@@ -54,11 +54,15 @@ def duplicates(db, args, ignore_case=True, check_exact_filesize=False):
 		if verbose: print 'Files smaller than', hr_size(seuil), 'are ignored.'
 	
 	# ignore case
-	if args.ignore_case: ignore_case_func = lambda (root, file, size): (root, file.lower(), size)
+	if args.ignore_case:
+		ignore_case_func = lambda (root, file, size): (root, file.lower(), size)
+		if verbose: print 'Ignore case : On'
 	else: ignore_case_func = lambda i:i
 	
-	# use filesize
-	if args.check_exact_filesize: select_func = lambda (root, file, size): (file, size)
+	# check exact filesize
+	if args.check_exact_filesize:
+		select_func = lambda (root, file, size): (file, size)
+		if verbose: print 'Check exact filesize : On'
 	else: select_func = lambda (root, file, size): (file,)
 	
 	group_key = lambda file: select_func(ignore_case_func(file))
@@ -69,13 +73,22 @@ def duplicates(db, args, ignore_case=True, check_exact_filesize=False):
 	doublons = []
 	filenames_count = 0
 	duplicates_filenames_count = 0
+	duplicates_count = 0
 	for k, g in itertools.groupby(all_files, group_key):
 		filenames_count += 1
-		files = list(g)
-		filename = files[0][1]
-		r_s = map(lambda (root, file, size): (root, size), files)
+		r_s = map(lambda (root, file, size): (root, size), g)
 		if len(r_s) > 1:
 			duplicates_filenames_count += 1
+			# check_approximative_filesize
+			if args.check_approximative_filesize:
+				sizes = [size for root, size in r_s]
+				average = float(sum(sizes)) / len(sizes)
+				cinq_pc = average * .05
+				min = average - cinq_pc
+				max = average + cinq_pc
+				r_s = filter(lambda (root, size): min <= size <= max, r_s)
+				if len(r_s) <= 1: continue
+			duplicates_count += 1
 			doublon = tuple([k[0]] + zip(*r_s))
 			doublons.append(doublon)
 	del all_files
@@ -83,7 +96,9 @@ def duplicates(db, args, ignore_case=True, check_exact_filesize=False):
 	if verbose:
 		print 'Count of filenames :', filenames_count
 		if filenames_count:
-			print 'Noms de fichiers non uniques :', duplicates_filenames_count
+			if duplicates_count != duplicates_filenames_count:
+				print 'Duplicates filenames count :', duplicates_filenames_count
+			print 'Duplicates files group count :', duplicates_count
 	
 	if duplicates_filenames_count == 0:
 		if verbose: print 'Aucun doublon trouve.'
@@ -107,9 +122,9 @@ def duplicates(db, args, ignore_case=True, check_exact_filesize=False):
 	del doublons
 	
 	if verbose:
-		print u'Tuples de répertoires contenant des fichiers de même nom :', directory_tuples_count
-		if seuil >= 2:
-			print u'Tuples de répertoires contenant plus de', seuil, u'fichiers de même nom :', final_directory_tuples_count
+		print 'Count of directory groups :', directory_tuples_count
+		if directory_tuples_count != final_directory_tuples_count:
+			print 'Count of directory groups with', seuil, 'duplicates files or more :', final_directory_tuples_count
 	
 	# filters
 	if args.filter:
@@ -136,9 +151,20 @@ def duplicates(db, args, ignore_case=True, check_exact_filesize=False):
 		
 		# filtre 2 : enlève les résultats dont les noms de fichiers sont identiques
 		#            à l'exception des éventuels caractères numériques (0-9)
-		if 2 in args.filter:
-			filter_key = lambda doublon: filter_nmax_files(1)(doublon) or filter_key2(doublon)
-			if verbose: print 'Application du filtre 1 ...',
+		if 2 in args.filter or 3 in args.filter:
+			f = 2
+			# filtre 3 : comme le 2 mais commence par remplacer /[ _-]+/ par ' '
+			if 3 in args.filter:
+				f = 3
+				import re
+				def inner_strip(doublon):
+					roots, files = doublon
+					regx = re.compile(r'[ _-]+')
+					return roots, [regx.sub(' ', file) for file in files]
+				filter_key3 = inner_strip
+			else: filter_key3 = lambda i:i
+			filter_key = lambda doublon: filter_nmax_files(1)(doublon) or filter_key2(filter_key3(doublon))
+			if verbose: print 'Application du filtre {} ...'.format(f),
 			doublons_par_reps = filter(filter_key, doublons_par_reps)
 			if verbose: print 'tuples restants :', len(doublons_par_reps)
 		

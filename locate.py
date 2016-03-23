@@ -164,7 +164,9 @@ parser_duplicates = subparsers.add_parser(cmd, usage='%(prog)s [options]', paren
 	help=description_strings[cmd], description=description_strings[cmd])
 duplicates_options = parser_duplicates.add_argument_group('duplicates options')
 duplicates_options.add_argument('-h', '--help', action='help', help='show this help message and exit')
-duplicates_options.add_argument('-e', '--check-exact-filesize', action='store_true', help='check filename and filesize')
+check_filesize_optiongroup = duplicates_options.add_mutually_exclusive_group()
+check_filesize_optiongroup.add_argument('-e', '--check-exact-filesize', action='store_true', help='check filename and filesize')
+check_filesize_optiongroup.add_argument('-a', '--check-approximative-filesize', action='store_true', help='check filename and filesize')
 duplicates_options.add_argument('-s', '--sort-criteria', choices=['file','directory'], default='file',
 	help="sort criteria : 'file' (default) = by decreasing file count ; 'directory' = by decreasing directories count, then by directories names")
 duplicates_options.add_argument('-v', '--view-max-file-count', type=int, nargs='?', const=15, default=-1, metavar='<count>',
@@ -175,7 +177,7 @@ filter_options = parser_duplicates.add_argument_group('filters', description=tex
 	filter  2 :  ignore results with more than one file and whose all
 	             filenames are same except for digits characters (0-9)
 	'''))
-filter_options.add_argument('-f', '--filter', action='append', type=int, choices=[1,2],
+filter_options.add_argument('-f', '--filter', action='append', type=int, choices=[1,2,3],
 	help='apply one filter among those listed above ; this option can be mentioned several times')
 filter_options.add_argument('-t', '--file-size-threshold', type=args_types.file_size, nargs='?', const='2MB', default=0, metavar='<file_size>',
 	help='file size threshold (smaller ones are ignored) (implicit value: %(const)s)')
