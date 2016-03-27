@@ -11,6 +11,23 @@ def _files_gen(db, drives, exclude_drives):
 	#for drive in drives:
 	#	for file in db.files(drive):
 	#		yield file
+	
+def identity(*args):
+	if len(args) == 1:
+		return args[0]
+	return args
+	
+filter_4_table = [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, u'a', u'b', u'c', u'd', u'e', u'f', u'g', u'h', u'i', u'j', u'k', u'l', u'm', u'n', u'o', u'p', u'q', u'r', u's', u't', u'u', u'v', u'w', u'x', u'y', u'z', None, None, None, None, None, None, u'a', u'b', u'c', u'd', u'e', u'f', u'g', u'h', u'i', u'j', u'k', u'l', u'm', u'n', u'o', u'p', u'q', u'r', u's', u't', u'u', u'v', u'w', u'x', u'y', u'z', None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, u'u', None, None, None, None, None, None, None, None, None, None, u'a', u'a', u'a', u'a', u'a', u'a', u'a', u'c', u'e', u'e', u'e', u'e', u'i', u'i', u'i', u'i', u'd', u'n', u'o', u'o', u'o', u'o', u'o', None, None, u'u', u'u', u'u', u'u', u'y', None, u's', u'a', u'a', u'a', u'a', u'a', u'a', u'a', u'c', u'e', u'e', u'e', u'e', u'i', u'i', u'i', u'i', None, u'n', u'o', u'o', u'o', u'o', u'o', None, None, u'u', u'u', u'u', u'u', u'y', None, u'y']
+def filter_4_transform_func(file_tuple):
+	""" transform filename : lower, remove accents, separators, special chars and digits
+	>>> filename = '__Un.-.pavé dans-la.marre à çëlLè qùï vîênt_0432.jpg'.decode('utf8')
+	>>> print filter_4_transform_func((u'root', u'' + filename, 0))[1]
+	unpavedanslamarreacellequivientjpg
+	"""
+	root, filename, size = file_tuple
+	file = filter(lambda c: ord(c) < 256, filename)
+	file = file.translate(filter_4_table)
+	return ((root, file, size))
 
 def duplicates(db, args, ignore_case=True, check_exact_filesize=False):
 	r"""
@@ -25,7 +42,7 @@ def duplicates(db, args, ignore_case=True, check_exact_filesize=False):
 	Z:\1_Qui fait\rEver les oiseaux\dans les\arbres
 	1 fichiers en commun :
 	<BLANKLINE>
-	  blank.w
+	  Blank.w
 	<BLANKLINE>
 	>>> args.ignore_case = False
 	>>> args.check_exact_filesize = True
@@ -53,11 +70,15 @@ def duplicates(db, args, ignore_case=True, check_exact_filesize=False):
 		all_files = itertools.ifilter(func, all_files)
 		if verbose: print 'Files smaller than', hr_size(seuil), 'are ignored.'
 	
-	# ignore case
-	if args.ignore_case:
-		ignore_case_func = lambda (root, file, size): (root, file.lower(), size)
-		if verbose: print 'Ignore case : On'
-	else: ignore_case_func = lambda i:i
+	# filter 4
+	if 4 in args.filter:
+		transform_func = filter_4_transform_func
+	else:
+		# ignore case
+		if args.ignore_case:
+			transform_func = lambda (root, file, size): (root, file.lower(), size)
+			if verbose: print 'Ignore case : On'
+		else: transform_func = identity
 	
 	# check exact filesize
 	if args.check_exact_filesize:
@@ -65,7 +86,7 @@ def duplicates(db, args, ignore_case=True, check_exact_filesize=False):
 		if verbose: print 'Check exact filesize : On'
 	else: select_func = lambda (root, file, size): (file,)
 	
-	group_key = lambda file: select_func(ignore_case_func(file))
+	group_key = lambda file: select_func(transform_func(file))
 	
 	all_files = sorted(all_files, key=group_key)
 	c_all = len(all_files)
@@ -76,20 +97,31 @@ def duplicates(db, args, ignore_case=True, check_exact_filesize=False):
 	duplicates_count = 0
 	for k, g in itertools.groupby(all_files, group_key):
 		filenames_count += 1
-		r_s = map(lambda (root, file, size): (root, size), g)
-		if len(r_s) > 1:
+		group = list(g)
+		# filter 4
+		if 4 in args.filter:
+			roots = [root for root, file, size in group]
+			group2 = []
+			for file in group:
+				roots.pop(0)
+				if file[0] not in roots:
+					group2.append(file)
+			group = group2
+		if len(group) > 1:
 			duplicates_filenames_count += 1
 			# check_approximative_filesize
 			if args.check_approximative_filesize:
-				sizes = [size for root, size in r_s]
+				sizes = [size for root, file, size in group]
 				average = float(sum(sizes)) / len(sizes)
 				cinq_pc = average * .05
 				min = average - cinq_pc
 				max = average + cinq_pc
-				r_s = filter(lambda (root, size): min <= size <= max, r_s)
-				if len(r_s) <= 1: continue
+				group = filter(lambda (root, file, size): min <= size <= max, group)
+				if len(group) <= 1: continue
 			duplicates_count += 1
-			doublon = tuple([k[0]] + zip(*r_s))
+			filename = group[0][1]
+			r_s = map(lambda (root, file, size): (root, size), group)
+			doublon = tuple([filename] + zip(*r_s))
 			doublons.append(doublon)
 	del all_files
 		

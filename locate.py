@@ -177,8 +177,11 @@ filter_options = parser_duplicates.add_argument_group('filters', description=tex
 	             filenames are same except for digits characters (0-9)
 	filter  2 :  ignore results with more than one file and whose all
 	             filenames are same except for digits characters (0-9)
+	filter  3 :  same as filter 2 but start by replacing '[ _-]+' to ' '
+	filter  4 :  transform filename (lower, remove accents, separators, special chars and digits)
+	             to find more duplicates file (ex: 'Cube 2 -_.avi' = '01_cube.1.avi')
 	'''))
-filter_options.add_argument('-f', '--filter', action='append', type=int, choices=[1,2,3],
+filter_options.add_argument('-f', '--filter', action='append', type=int, choices=[1,2,3,4],
 	help='apply one filter among those listed above ; this option can be mentioned several times')
 filter_options.add_argument('-t', '--file-size-threshold', type=args_types.file_size, nargs='?', const='2MB', default=0, metavar='<file_size>',
 	help='file size threshold (smaller ones are ignored) (implicit value: %(const)s)')
@@ -191,6 +194,9 @@ args = parser.parse_args()
 # find.wide option
 if args.func == find and args.wide:
 	args.pattern = '*' + args.pattern + '*'
+# duplicates.filter option
+if args.func == duplicates and args.filter is None:
+	args.filter = []
 
 # log option
 if args.log_file:
